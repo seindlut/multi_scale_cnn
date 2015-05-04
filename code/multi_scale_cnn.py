@@ -1,6 +1,11 @@
-#TODO: add continue training module.
-#      add dropout ONLY to mlp module.
-#NOTE: add penalty for the cost function.      
+# TODO: 1. analysis of activation state.
+#       2. add dropout by using a simple mask of (0, 1)
+#       3. analysis of activation state of hidden layer.
+#          3.1 finish training and save parameters
+#          3.2 forward propagate training set and record hidden layer state.
+#          3.3 display histogram of hidden layer state.
+
+
 import os
 import sys
 import time
@@ -28,7 +33,8 @@ class MyNetConvPoolLayer(object):
     def __init__(self, rng, input, filter_shape, image_shape, poolsize=(2,2), params_W=None, params_b=None):
         assert image_shape[1] == filter_shape[1]
         self.input = input
-        
+
+        # if params_W is not given, generate random params_W        
         if params_W == None:
             fan_in = numpy.prod(filter_shap[1:])
             fan_out = (filter_shape[0] * numpy.prod(filter_shape[2:]) /
@@ -41,36 +47,37 @@ class MyNetConvPoolLayer(object):
                 ),
                 borrow=True
             )
-
         else:
             self.W = theano.shared(
                 numpy.asarray(params_W,dtype=theano.config.floatX), borrow=True)
 
+        # if params_b is not given, generate random params_b
         if params_b == None:
             b_values = numpy.zeros((filter_shape[0],), dtype=theano.config.floatX)
             self.b = theano.shared(value=b_values, borrow=True)
-
         else:
             self.b = theano.shared(
                 numpy.asarray(params_b,dtype=theano.config.floatX), borrow=True)
 
+        # feature maps after convolution
         conv_out = conv.conv2d(
             input=input,
             filters=self.W,
             filter_shape=filter_shape,
             image_shape=image_shape
         )
+        
+        # feature maps after pooling
         pooled_out = downsample.max_pool_2d(
             input=conv_out,
             ds=poolsize,
             ignore_border=True
         )
-        pooled_out = downsample.max_pool_2d(
-            input=conv_out,
-            ds=poolsize,
-            ignore_border=True
-        )
+
+        # output of layer, activated pooled feature maps 
         self.output = T.tanh(pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
+
+        # parameters list
         self.params = [self.W, self.b]
 
 # important learning rate 0.05
