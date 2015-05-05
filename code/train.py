@@ -11,6 +11,7 @@ from theano.tensor.signal import downsample
 from theano.tensor.nnet import conv
 from theano.tensor.nnet import sigmoid
 from theano.tensor.nnet import hard_sigmoid
+from theano.tensor.shared_randomstreams import RandomStreams
 from random import randint
 from IO import unpickle
 from IO import share_data
@@ -27,9 +28,10 @@ from mlp import HiddenLayer
 # important learning rate [20, 50]
 def train_cifar10(datapath, dataset_name,
                   learning_rate=0.2, n_epochs=10000,
-                  nkerns=[20, 50], batch_size=10000):
+                  nkerns=[32, 32], batch_size=5000):
     """ This function is used to train cifar10 dataset for object recognition."""
     rng = numpy.random.RandomState(23455)                        # generate random number seed
+    mrng = RandomStreams()
     num_channels = 3                                             # for RGB 3-channel image inputs
     layer0_rows = 32                                             # image height 
     layer0_cols = 32                                             # image width
@@ -47,9 +49,10 @@ def train_cifar10(datapath, dataset_name,
     pool1_size = 1                                                        # no pooling for the first layer
     layer2_rows = (layer1_rows - kernel1_size + 1) / pool1_size           # layer2_rows = 5
     layer2_cols = (layer1_cols - kernel1_size + 1) / pool1_size           # layer2_cols = 5
-    hidden_nodes = 50
+    hidden_nodes = 64
     hidden_extra_nodes = 500
-    penalty_coeff = 0.01
+    penalty_coeff = 0.0
+    num_batches = 50000 / batch_size
 
     # read in data
     data_list  = numpy.empty(shape=[0, column_width])                     # for each set of training data,
@@ -138,6 +141,7 @@ def train_cifar10(datapath, dataset_name,
     )
    
     layer2 = HiddenLayer(
+        mrng,
         rng,
         input=layer2_input,
         n_in=nkerns[1]*((layer1_rows+1-kernel1_size)*(layer1_cols+1-kernel1_size)+(layer1_sub_rows+1-kernel1_size)*(layer1_sub_cols+1-kernel1_size)), 
@@ -179,7 +183,7 @@ def train_cifar10(datapath, dataset_name,
 
     train_model = theano.function(
         [training_index],
-        [total_cost, layer3.errors(y), layer0.output],
+        [total_cost, layer3.errors(y)],
         updates=updates,
         givens={
             x : shared_x[training_index * batch_size : (training_index+1) * batch_size],
@@ -191,8 +195,8 @@ def train_cifar10(datapath, dataset_name,
         [],
         layer3.errors(y),
         givens={
-            x: evalset_x,
-            y: evalset_y
+            x: evalset_x[0: 5000],
+            y: evalset_y[0: 5000]
         }
     )
 
@@ -219,26 +223,27 @@ def train_cifar10(datapath, dataset_name,
     param_files = ['p0', 'p1', 'p2', 'p3', 'p4',
                    'p5', 'p6', 'p7', 'p8', 'p9']
     while(epoch < n_epochs) and (not done_looping):
-        batch_index = randint(0, 4)                                # randomly generate the batch number to be trained.
-        cost_ij, error, output_check = train_model(batch_index)
+        batch_index = randint(0, num_batches-1)                                # randomly generate the batch number to be trained.
+        cost_ij, error = train_model(batch_index)
         epoch = epoch + 1
         print "number of iterations:   ", epoch 
         print "selected training batch:", batch_index
         print "current cost:           ", cost_ij
         print "validate error:         ", error
 
+        # call validation accuracy
         if (epoch % 10 == 0):
             error_test = test_model()
             print "      "
             print "validate error of test_batch:", error_test
             print "      "
 
-        if (epoch % 1000 == 0):
-            numpy.set_printoptions(threshold=numpy.nan)
-#            print output_check 
-            f = file(param_files[epoch/1000],'wb')
-            cPickle.dump(params, f, protocol=cPickle.HIGHEST_PROTOCOL)
-            f.close()
+        # save paramters
+#        if (epoch % 1000 == 0):
+#            numpy.set_printoptions(threshold=numpy.nan)
+#            f = file(param_files[epoch/1000],'wb')
+#            cPickle.dump(params, f, protocol=cPickle.HIGHEST_PROTOCOL)
+#            f.close()
 
 if __name__ == '__main__':
     dsetname = ['data_batch_1','data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5'];  #dataset file names.
