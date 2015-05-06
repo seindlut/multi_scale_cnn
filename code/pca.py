@@ -35,5 +35,7 @@ def pca(mat, reduced_dim):
     order = eig_val.argsort()[::-1]      # get the sorting order
     eig_val = eig_val[order]
     eig_vec = eig_vec[:, order]          # sort eigenvalues and eigenvectors
+
+    transform = eig_vec[:, 0:reduced_dim].T
     
-    return eig_val, eig_vec 
+    return transform
