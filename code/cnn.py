@@ -37,7 +37,7 @@ class MyNetConvPoolLayer(object):
 
         # if params_W is not given, generate random params_W        
         if params_W == None:
-            fan_in = numpy.prod(filter_shap[1:])
+            fan_in = numpy.prod(filter_shape[1:])
             fan_out = (filter_shape[0] * numpy.prod(filter_shape[2:]) /
                        numpy.prod(poolsize))
             W_bound = numpy.sqrt(6. / (fan_in + fan_out))
