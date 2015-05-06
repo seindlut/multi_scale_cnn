@@ -32,5 +32,8 @@ def pca(mat, reduced_dim):
                                          # be greater than the original 
     eig_val, eig_vec = numpy.linalg.eig(covariance(mat))
                                          # eigen values should be rearranged
+    order = eig_val.argsort()[::-1]      # get the sorting order
+    eig_val = eig_val[order]
+    eig_vec = eig_vec[:, order]          # sort eigenvalues and eigenvectors
     
     return eig_val, eig_vec 
