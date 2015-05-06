@@ -32,8 +32,11 @@ from mlp import HiddenLayer, DropoutHiddenLayer
 
 # important learning rate 0.05
 # important learning rate [20, 50]
+
+# TODO: add two variables to store cost and validation error.
+
 def train_cifar10(datapath, dataset_name,
-                  learning_rate=0.2, n_epochs=10000,
+                  learning_rate=0.2, n_epochs=10,
                   nkerns=[20, 50], batch_size=10000):
     """ This function is used to train cifar10 dataset for object recognition."""
     rng = numpy.random.RandomState(23455)                        # generate random number seed
@@ -168,12 +171,10 @@ def train_cifar10(datapath, dataset_name,
 
     patience = 10000
     epoch = 0
-    done_looping = False
+    training_cost = []
+    validation_error = []
 
-    # save parameters every 1000 iterations.
-    param_files = ['p0', 'p1', 'p2', 'p3', 'p4',
-                   'p5', 'p6', 'p7', 'p8', 'p9']
-    while(epoch < n_epochs) and (not done_looping):
+    while(epoch < n_epochs):
         batch_index = randint(0, 4)                                # randomly generate the batch number to be trained.
         cost_ij, error = train_model(batch_index)
         epoch = epoch + 1
@@ -187,13 +188,16 @@ def train_cifar10(datapath, dataset_name,
             print "      "
             print "validate error of test_batch:", error_test
             print "      "
+            validation_error.append(error_test.tolist())
 
-        if (epoch % 1000 == 0):
-            numpy.set_printoptions(threshold=numpy.nan)
-            f = file(param_files[epoch/1000],'wb')
-            cPickle.dump(params, f, protocol=cPickle.HIGHEST_PROTOCOL)
-            f.close()
-
+        training_cost.append(cost_ij.tolist())
+        
+        if (epoch == n_epochs):
+            saved_params = [training_cost, validation_error]
+            saved_file = open('cost_error', 'wb')
+            cPickle.dump(saved_params, saved_file)
+            saved_file.close()
+ 
 if __name__ == '__main__':
     dsetname = ['data_batch_1','data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5'];  #dataset file names.
     train_cifar10('../data/cifar10/', dsetname)
