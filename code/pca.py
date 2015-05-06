@@ -21,3 +21,16 @@ def covariance(mat):
     num_data = mat.shape[1]
     cov = 1. / (num_data - 1) * numpy.dot(mat, mat.T)
     return cov
+
+def pca(mat, reduced_dim):
+    """ Function used for principle component analysis.
+        mat: input matrix with size n*m, representing
+             m n-dim vectors.
+        reduced_dim: dimension to be reserved after pca.
+    """
+    assert reduced_dim <= mat.shape[0]   # principle components should not 
+                                         # be greater than the original 
+    eig_val, eig_vec = numpy.linalg.eig(covariance(mat))
+                                         # eigen values should be rearranged
+    
+    return eig_val, eig_vec 
