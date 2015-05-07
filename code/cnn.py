@@ -22,6 +22,7 @@ import pdb
 from logistic_sgd import LogisticRegression, load_data
 from mlp import HiddenLayer
 
+# TODO: add local contrast normalization.
 class MyNetConvPoolLayer(object):
     def __init__(self, rng, input, filter_shape, image_shape, poolsize=(2,2), params_W=None, params_b=None, activation_mode=0):
         assert image_shape[1] == filter_shape[1]
@@ -50,7 +51,17 @@ class MyNetConvPoolLayer(object):
             self.b = theano.shared(value=b_values, borrow=True)
         else:
             self.b = theano.shared(
-                numpy.asarray(params_b,dtype=theano.config.floatX), borrow=True)
+                numpy.asarray(params_b,dtype=theano.config.floatX), borrow=True
+            )
+
+        self.momentum_W = theano.shared(
+            numpy.zeros(filter_shape, dtype=theano.config.floatX),
+            borrow=True
+        )
+        self.momentum_b = theano.shared(
+            numpy.zeros((filter_shape[0],), dtype=theano.config.floatX),
+            borrow=True
+        )  
 
         # feature maps after convolution
         conv_out = conv.conv2d(
