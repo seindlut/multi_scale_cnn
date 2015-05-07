@@ -1,12 +1,3 @@
-# TODO: 1. analysis of activation state.
-#       2. use traditional LeNet5 for accuracy checking.    
-#       3. add dropout by using a simple mask of (0, 1)
-#       4. analysis of activation state of hidden layer.
-#          3.1 finish training and save parameters
-#          3.2 forward propagate training set and record hidden layer state.
-#          3.3 display histogram of hidden layer state.
-
-
 import os
 import sys
 import time
@@ -24,6 +15,7 @@ from random import randint
 from IO import unpickle
 from IO import share_data
 from preprocess import normalize
+from activation import relu
 import pdb
 
 
@@ -31,7 +23,7 @@ from logistic_sgd import LogisticRegression, load_data
 from mlp import HiddenLayer
 
 class MyNetConvPoolLayer(object):
-    def __init__(self, rng, input, filter_shape, image_shape, poolsize=(2,2), params_W=None, params_b=None):
+    def __init__(self, rng, input, filter_shape, image_shape, poolsize=(2,2), params_W=None, params_b=None, activation_mode=0):
         assert image_shape[1] == filter_shape[1]
         self.input = input
 
@@ -75,8 +67,10 @@ class MyNetConvPoolLayer(object):
             ignore_border=True
         )
 
-        # output of layer, activated pooled feature maps 
-        self.output = T.tanh(pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
-
+        # output of layer, activated pooled feature maps
+        if activation_mode == 0: 
+            self.output = T.tanh(pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
+        elif activation_mode == 1:
+            self.output = relu(pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
         # parameters list
         self.params = [self.W, self.b]
