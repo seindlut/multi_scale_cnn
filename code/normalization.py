@@ -30,4 +30,4 @@ def local_responce_normalization(data, eps=0.001):
         eps: small constant in case the normalizer gets 0
     """
     normalizer = T.sqrt(eps + (data**2).sum(axis=1))
-    return normalizer 
+    return data / normalizer.dimshuffle(0,'x',1,2)
