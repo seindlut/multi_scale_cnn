@@ -97,7 +97,7 @@ def train_cifar10(datapath, dataset_name,
 
     validate_set = unpickle('../data/cifar10/test_batch')
     validate_x = validate_set['data']
-    validata_x = preprocess.mean_subtraction(validate_x)
+    validate_x = preprocess.mean_subtraction(validate_x)
     validate_y = validate_set['labels']
     normalized_valx = normalize(validate_x)                               # normalize the validation set.
     evalset_x, evalset_y = share_data(normalized_valx, validate_y)
