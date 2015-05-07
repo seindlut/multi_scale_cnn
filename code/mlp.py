@@ -38,6 +38,15 @@ class HiddenLayer(object):
         self.W = theano.shared(value=W, name='W', borrow=True)
         self.b = theano.shared(value=b, name='b', borrow=True)
 
+        self.momentum_W = theano.shared(
+            numpy.zeros((n_in, n_out), dtype=theano.config.floatX),
+            borrow=True
+        )
+        self.momentum_b = theano.shared(
+            numpy.zeros((n_out,), dtype=theano.config.floatX),
+            borrow=True
+        )
+
         lin_output = T.dot(input, self.W) + self.b
 
         self.output = (
