@@ -23,6 +23,7 @@ from theano.tensor.nnet import hard_sigmoid
 from random import randint
 from IO import unpickle
 from IO import share_data
+import preprocess
 from preprocess import normalize
 from cnn import MyNetConvPoolLayer
 from activation import relu
@@ -37,7 +38,7 @@ from mlp import HiddenLayer, DropoutHiddenLayer
 # TODO: add two variables to store cost and validation error.
 
 def train_cifar10(datapath, dataset_name,
-                  learning_rate=0.05, n_epochs=6000,
+                  learning_rate=0.3, n_epochs=6000,
                   nkerns=[32,32,64], batch_size=5000):
     """ This function is used to train cifar10 dataset for object recognition."""
     rng = numpy.random.RandomState(23455)                        # generate random number seed
@@ -56,13 +57,13 @@ def train_cifar10(datapath, dataset_name,
     conv_layer1_rows = (conv_layer0_rows - conv_layer0_kernel_size + 1) / conv_layer0_pool_size           # conv_layer1_rows = 14
     conv_layer1_cols = (conv_layer0_cols - conv_layer0_kernel_size + 1) / conv_layer0_pool_size           # conv_layer1_cols = 14
     conv_layer1_kernel_size = 5
-    conv_layer1_pool_size = 1                                                                             # no pooling for the first layer
+    conv_layer1_pool_size = 2                                                                             # no pooling for the first layer
 
     # convolutional layer 2 parameters #
     conv_layer2_rows = (conv_layer1_rows - conv_layer1_kernel_size + 1) / conv_layer1_pool_size         # layer1_5_rows = 10
     conv_layer2_cols = (conv_layer1_cols - conv_layer1_kernel_size + 1) / conv_layer1_pool_size         # layer1_5_cols = 10
-    conv_layer2_kernel_size = 5
-    conv_layer2_pool_size = 1
+    conv_layer2_kernel_size = 4 
+    conv_layer2_pool_size = 2 
 
     # output rows and columns of convolutional net #
     conv_output_rows = (conv_layer2_rows - conv_layer2_kernel_size + 1) / conv_layer2_pool_size       # layer2_rows = 6 
@@ -83,6 +84,7 @@ def train_cifar10(datapath, dataset_name,
     for i in range(len(dataset_name)):
         temp_data = unpickle(datapath+dataset_name[i])
         temp_x    = temp_data['data']
+        temp_x    = preprocess.mean_subtraction(temp_x)
         temp_y    = numpy.array(temp_data['labels'])                      # y labels are python lists, convert
                                                                           # to numpy.ndarray
         normalized_x = normalize(temp_x)                                  # normalize data, rescale to 0 - 1
