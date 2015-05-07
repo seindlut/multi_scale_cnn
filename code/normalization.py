@@ -24,10 +24,10 @@ def mean_subtraction(data, data_shape):
     )
     return (data - mean_tensor)
 
-def local_responce_normalization(data, num_layers, eps=0.001):
+def local_responce_normalization(data, eps=0.001):
     """ Function used for local responce normalization. 
         data: input 4D theano.tensor
-        num_layers: number of layers considered when normalizing
         eps: small constant in case the normalizer gets 0
     """
-
+    normalizer = T.sqrt(eps + (data**2).sum(axis=1))
+    return normalizer 
