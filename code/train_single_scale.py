@@ -33,9 +33,6 @@ from mlp import HiddenLayer, DropoutHiddenLayer
 
 # important learning rate 0.05
 # important learning rate [20, 50]
-
-# TODO: add two variables to store cost and validation error.
-
 def train_cifar10(datapath, dataset_name,
                   learning_rate=0.3, n_epochs=6000,
                   nkerns=[32,32,64], batch_size=5000):
@@ -71,6 +68,10 @@ def train_cifar10(datapath, dataset_name,
     # fully connected layer parameters #
     fc_layer0_hidden_nodes = 64 
     fc_layer1_hidden_nodes = 10
+
+    # optimization parameters
+    momentum_coeff = 0.9
+    weight_decay = 0.0005
     penalty_coeff = 0.00
 
     num_batches = num_images / batch_size
@@ -171,18 +172,35 @@ def train_cifar10(datapath, dataset_name,
     grad_convl0      = T.grad(total_cost, conv_layer0.params)
 
     updates = [
-        (class_layer0.params[0], class_layer0.params[0] - learning_rate * grad_classl0[0]),
-        (class_layer0.params[1], class_layer0.params[1] - learning_rate * grad_classl0[1]),
-        (fc_layer1.params[0], fc_layer1.params[0] - learning_rate * grad_fcl1[0]),
-        (fc_layer1.params[1], fc_layer1.params[1] - learning_rate * grad_fcl1[1]),
-        (fc_layer0.params[0], fc_layer0.params[0] - learning_rate * grad_fcl0[0]),
-        (fc_layer0.params[1], fc_layer0.params[1] - learning_rate * grad_fcl0[1]),
-        (conv_layer2.params[0], conv_layer2.params[0] - learning_rate * grad_convl2[0]),
-        (conv_layer2.params[1], conv_layer2.params[1] - learning_rate * grad_convl2[1]),
-        (conv_layer1.params[0], conv_layer1.params[0] - learning_rate * grad_convl1[0]),
-        (conv_layer1.params[1], conv_layer1.params[1] - learning_rate * grad_convl1[1]),
-        (conv_layer0.params[0], conv_layer0.params[0] - learning_rate * grad_convl0[0]),
-        (conv_layer0.params[1], conv_layer0.params[1] - learning_rate * grad_convl0[1])
+        (conv_layer0.momentum_W, momentum_coeff * conv_layer0.momentum_W - weight_decay * learning_rate * conv_layer0.params[0] - learning_rate * grad_convl0[0]),
+        (conv_layer0.momentum_b, momentum_coeff * conv_layer0.momentum_b - weight_decay * learning_rate * conv_layer0.params[1] - learning_rate * grad_convl0[1]),
+        (conv_layer0.params[0], conv_layer0.params[0] + momentum_coeff * conv_layer0.momentum_W - weight_decay * learning_rate * conv_layer0.params[0] - learning_rate * grad_convl0[0]),
+        (conv_layer0.params[1], conv_layer0.params[1] + momentum_coeff * conv_layer0.momentum_b - weight_decay * learning_rate * conv_layer0.params[1] - learning_rate * grad_convl0[1]),
+
+        (conv_layer1.momentum_W, momentum_coeff * conv_layer1.momentum_W - weight_decay * learning_rate * conv_layer1.params[0] - learning_rate * grad_convl1[0]),
+        (conv_layer1.momentum_b, momentum_coeff * conv_layer1.momentum_b - weight_decay * learning_rate * conv_layer1.params[1] - learning_rate * grad_convl1[1]),
+        (conv_layer1.params[0], conv_layer1.params[0] + momentum_coeff * conv_layer1.momentum_W - weight_decay * learning_rate * conv_layer1.params[0] - learning_rate * grad_convl1[0]),
+        (conv_layer1.params[1], conv_layer1.params[1] + momentum_coeff * conv_layer1.momentum_b - weight_decay * learning_rate * conv_layer1.params[1] - learning_rate * grad_convl1[1]),
+
+        (conv_layer2.momentum_W, momentum_coeff * conv_layer2.momentum_W - weight_decay * learning_rate * conv_layer2.params[0] - learning_rate * grad_convl2[0]),
+        (conv_layer2.momentum_b, momentum_coeff * conv_layer2.momentum_b - weight_decay * learning_rate * conv_layer2.params[1] - learning_rate * grad_convl2[1]),
+        (conv_layer2.params[0], conv_layer2.params[0] + momentum_coeff * conv_layer2.momentum_W - weight_decay * learning_rate * conv_layer2.params[0] - learning_rate * grad_convl2[0]),
+        (conv_layer2.params[1], conv_layer2.params[1] + momentum_coeff * conv_layer2.momentum_b - weight_decay * learning_rate * conv_layer2.params[1] - learning_rate * grad_convl2[1]),
+
+        (fc_layer0.momentum_W, momentum_coeff * fc_layer0.momentum_W - weight_decay * learning_rate * fc_layer0.params[0] - learning_rate * grad_fcl0[0]),
+        (fc_layer0.momentum_b, momentum_coeff * fc_layer0.momentum_b - weight_decay * learning_rate * fc_layer0.params[1] - learning_rate * grad_fcl0[1]),
+        (fc_layer0.params[0], fc_layer0.params[0] + momentum_coeff * fc_layer0.momentum_W - weight_decay * learning_rate * fc_layer0.params[0] - learning_rate * grad_fcl0[0]),
+        (fc_layer0.params[1], fc_layer0.params[1] + momentum_coeff * fc_layer0.momentum_b - weight_decay * learning_rate * fc_layer0.params[1] - learning_rate * grad_fcl0[1]),
+
+        (fc_layer1.momentum_W, momentum_coeff * fc_layer1.momentum_W - weight_decay * learning_rate * fc_layer1.params[0] - learning_rate * grad_fcl1[0]),
+        (fc_layer1.momentum_b, momentum_coeff * fc_layer1.momentum_b - weight_decay * learning_rate * fc_layer1.params[1] - learning_rate * grad_fcl1[1]),
+        (fc_layer1.params[0], fc_layer1.params[0] + momentum_coeff * fc_layer1.momentum_W - weight_decay * learning_rate * fc_layer1.params[0] - learning_rate * grad_fcl1[0]),
+        (fc_layer1.params[1], fc_layer1.params[1] + momentum_coeff * fc_layer1.momentum_b - weight_decay * learning_rate * fc_layer1.params[1] - learning_rate * grad_fcl1[1]),
+
+        (class_layer0.momentum_W, momentum_coeff * class_layer0.momentum_W - weight_decay * learning_rate * class_layer0.params[0] - learning_rate * grad_classl0[0]), 
+        (class_layer0.momentum_b, momentum_coeff * class_layer0.momentum_b - weight_decay * learning_rate * class_layer0.params[1] - learning_rate * grad_classl0[1]), 
+        (class_layer0.params[0], class_layer0.params[0] + momentum_coeff * class_layer0.momentum_W - weight_decay * learning_rate * class_layer0.params[0] - learning_rate * grad_classl0[0]),
+        (class_layer0.params[1], class_layer0.params[1] + momentum_coeff * class_layer0.momentum_b - weight_decay * learning_rate * class_layer0.params[1] - learning_rate * grad_classl0[1]),
     ]
 
     training_index = T.iscalar()
