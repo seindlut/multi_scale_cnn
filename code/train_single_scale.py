@@ -1,7 +1,6 @@
-# TODO: 1. analysis of activation state.
-#       2. use traditional LeNet5 for accuracy checking.    
-#       3. add dropout by using a simple mask of (0, 1)
-#       4. analysis of activation state of hidden layer.
+# TODO: 1. ADD MOMENTUM TERM AND WEIGHT DECAY FOR TRAINING!!!
+#       2. add dropout by using a simple mask of (0, 1)
+#       3. analysis of activation state of hidden layer.
 #          3.1 finish training and save parameters
 #          3.2 forward propagate training set and record hidden layer state.
 #          3.3 display histogram of hidden layer state.
