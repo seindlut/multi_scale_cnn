@@ -25,6 +25,7 @@ from IO import unpickle
 from IO import share_data
 from preprocess import normalize
 from cnn import MyNetConvPoolLayer
+from activation import relu
 import pdb
 
 from logistic_sgd import LogisticRegression, load_data
@@ -36,29 +37,46 @@ from mlp import HiddenLayer, DropoutHiddenLayer
 # TODO: add two variables to store cost and validation error.
 
 def train_cifar10(datapath, dataset_name,
-                  learning_rate=0.2, n_epochs=10,
-                  nkerns=[20, 50], batch_size=10000):
+                  learning_rate=0.05, n_epochs=6000,
+                  nkerns=[32,32,64], batch_size=5000):
     """ This function is used to train cifar10 dataset for object recognition."""
     rng = numpy.random.RandomState(23455)                        # generate random number seed
+    num_images = 50000
     num_channels = 3                                             # for RGB 3-channel image inputs
-    layer0_rows = 32                                             # image height 
-    layer0_cols = 32                                             # image width
-    layer_pixels = layer0_rows * layer0_cols                     # number of pixels in a layer: 1024
-    column_width = layer_pixels * num_channels                   # column_width = 3072
-    kernel0_size = 5                                             # filter size of first layer kernels
-    pool0_size = 2                                               # pool size of the first layer
-    layer1_rows = (layer0_rows - kernel0_size + 1) / pool0_size           # layer1_rows = 14
-    layer1_cols = (layer0_cols - kernel0_size + 1) / pool0_size           # layer1_cols = 14
-    kernel1_size = 5
-    pool1_size = 1                                                        # no pooling for the first layer
-    layer2_rows = (layer1_rows - kernel1_size + 1) / pool1_size           # layer2_rows = 5
-    layer2_cols = (layer1_cols - kernel1_size + 1) / pool1_size           # layer2_cols = 5
-    hidden_nodes = 50
-    hidden_extra_nodes = 500
-    penalty_coeff = 0.01
+
+    # convolutional layer 0 parameters #
+    conv_layer0_rows = 32                                             # image height 32
+    conv_layer0_cols = 32                                             # image width  32
+    conv_layer0_pixels = conv_layer0_rows * conv_layer0_cols          # number of pixels in a layer: 1024
+    conv_layer0_column_width = conv_layer0_pixels * num_channels      # column_width = 3072
+    conv_layer0_kernel_size = 5                                       # filter size of first layer kernels
+    conv_layer0_pool_size = 2                                         # pool size of the first layer
+
+    # convolutional layer 1 parameters #
+    conv_layer1_rows = (conv_layer0_rows - conv_layer0_kernel_size + 1) / conv_layer0_pool_size           # conv_layer1_rows = 14
+    conv_layer1_cols = (conv_layer0_cols - conv_layer0_kernel_size + 1) / conv_layer0_pool_size           # conv_layer1_cols = 14
+    conv_layer1_kernel_size = 5
+    conv_layer1_pool_size = 1                                                                             # no pooling for the first layer
+
+    # convolutional layer 2 parameters #
+    conv_layer2_rows = (conv_layer1_rows - conv_layer1_kernel_size + 1) / conv_layer1_pool_size         # layer1_5_rows = 10
+    conv_layer2_cols = (conv_layer1_cols - conv_layer1_kernel_size + 1) / conv_layer1_pool_size         # layer1_5_cols = 10
+    conv_layer2_kernel_size = 5
+    conv_layer2_pool_size = 1
+
+    # output rows and columns of convolutional net #
+    conv_output_rows = (conv_layer2_rows - conv_layer2_kernel_size + 1) / conv_layer2_pool_size       # layer2_rows = 6 
+    conv_output_cols = (conv_layer2_cols - conv_layer2_kernel_size + 1) / conv_layer2_pool_size       # layer2_cols = 6
+
+    # fully connected layer parameters #
+    fc_layer0_hidden_nodes = 64 
+    fc_layer1_hidden_nodes = 10
+    penalty_coeff = 0.00
+
+    num_batches = num_images / batch_size
 
     # read in data
-    data_list  = numpy.empty(shape=[0, column_width])                     # for each set of training data,
+    data_list  = numpy.empty(shape=[0, conv_layer0_column_width])         # for each set of training data,
                                                                           # column width is fixed.
     label_list = numpy.empty(shape=[0,])                                  # for each set of training labels,
                                                                           # row height is fixed.
@@ -78,7 +96,7 @@ def train_cifar10(datapath, dataset_name,
     validate_set = unpickle('../data/cifar10/test_batch')
     validate_x = validate_set['data']
     validate_y = validate_set['labels']
-    normalized_valx = normalize(validate_x)                              # normalize the validation set.
+    normalized_valx = normalize(validate_x)                               # normalize the validation set.
     evalset_x, evalset_y = share_data(normalized_valx, validate_y)
     del validate_set, validate_x, validate_y, normalized_valx
 
@@ -91,55 +109,78 @@ def train_cifar10(datapath, dataset_name,
     ######################
     print '... buliding the model'    
     
-    layer0_input = x.reshape((batch_size, num_channels, layer0_rows, layer0_cols))
+    conv_layer0_input = x.reshape((batch_size, num_channels, conv_layer0_rows, conv_layer0_cols))
 
-    layer0 = MyNetConvPoolLayer(
+    conv_layer0 = MyNetConvPoolLayer(
         rng,
-        input=layer0_input,
-        image_shape=(batch_size, num_channels, layer0_rows, layer0_cols),        # image_shape = (500, 3, 32, 32)
-        filter_shape=(nkerns[0], num_channels, kernel0_size, kernel0_size),      # filter_shape= (20, 3, 5, 5)
-        poolsize=(pool0_size, pool0_size)
+        input=conv_layer0_input,
+        image_shape=(batch_size, num_channels, conv_layer0_rows, conv_layer0_cols),        # image_shape = (500, 3, 32, 32)
+        filter_shape=(nkerns[0], num_channels, conv_layer0_kernel_size, conv_layer0_kernel_size),      # filter_shape= (20, 3, 5, 5)
+        poolsize=(conv_layer0_pool_size, conv_layer0_pool_size),
+        activation_mode=1
     )
   
-    layer1 = MyNetConvPoolLayer(
+    conv_layer1 = MyNetConvPoolLayer(
         rng,
-        input=layer0.output,
-        image_shape=(batch_size, nkerns[0], layer1_rows, layer1_cols),           # image_shape = (500, 20, 14, 14)
-        filter_shape=(nkerns[1], nkerns[0], kernel1_size, kernel1_size),         # filter_shape= (50, 20, 5, 5)
-        poolsize=(pool1_size, pool1_size)
+        input=conv_layer0.output,
+        image_shape=(batch_size, nkerns[0], conv_layer1_rows, conv_layer1_cols),           # image_shape = (500, 20, 14, 14)
+        filter_shape=(nkerns[1], nkerns[0], conv_layer1_kernel_size, conv_layer1_kernel_size),         # filter_shape= (50, 20, 5, 5)
+        poolsize=(conv_layer1_pool_size, conv_layer1_pool_size),
+        activation_mode=1
     ) 
 
-    layer2_input = layer1.output.flatten(2)    
-
-    layer2 = HiddenLayer(
+    conv_layer2 = MyNetConvPoolLayer(
         rng,
-        input=layer2_input,
-	n_in=nkerns[1]*(layer1_rows+1-kernel1_size)*(layer1_cols+1-kernel1_size), 
-        n_out=hidden_nodes,
-        activation=T.tanh
+        input=conv_layer1.output,
+        image_shape=(batch_size, nkerns[1], conv_layer2_rows, conv_layer2_cols),
+        filter_shape=(nkerns[2], nkerns[1], conv_layer2_kernel_size, conv_layer2_kernel_size),
+        poolsize=(conv_layer2_pool_size, conv_layer2_pool_size),
+        activation_mode=1
+    )
+
+    fc_layer0_input = conv_layer2.output.flatten(2)    
+    fc_layer0 = HiddenLayer(
+        rng,
+        input=fc_layer0_input,
+	n_in=nkerns[2] * conv_output_rows * conv_output_cols, 
+        n_out=fc_layer0_hidden_nodes,
+        activation=relu
     )    
 
+    fc_layer1 = HiddenLayer(
+        rng,
+        input=fc_layer0.output,
+	n_in=fc_layer0_hidden_nodes, 
+        n_out=fc_layer1_hidden_nodes,
+        activation=relu
+    )
     # two logistic regression does not share any parameters, so there is
     # no predefined parameters.
-    layer3 = LogisticRegression(input=layer2.output, n_in=hidden_nodes, n_out=10)
+    class_layer0 = LogisticRegression(input=fc_layer1.output, n_in=fc_layer1_hidden_nodes, n_out=10)
 
-    total_cost = layer3.negative_log_likelihood(y) + penalty_coeff * layer2.W.norm(2)
+    total_cost = class_layer0.negative_log_likelihood(y) + penalty_coeff * (fc_layer0.W.norm(2) + fc_layer1.W.norm(2))
 
-    params = layer3.params + layer2.params + layer1.params + layer0.params
-    grad_l3     = T.grad(total_cost, layer3.params)
-    grad_l2     = T.grad(total_cost, layer2.params)
-    grad_l1     = T.grad(total_cost, layer1.params)
-    grad_l0     = T.grad(total_cost, layer0.params)
+    params = class_layer0.params + fc_layer1.params + fc_layer0.params + conv_layer2.params + conv_layer1.params + conv_layer0.params
+    grad_classl0     = T.grad(total_cost, class_layer0.params)
+    grad_fcl1        = T.grad(total_cost, fc_layer1.params)
+    grad_fcl0        = T.grad(total_cost, fc_layer0.params)
+    grad_convl2      = T.grad(total_cost, conv_layer2.params)
+    grad_convl1      = T.grad(total_cost, conv_layer1.params)
+    grad_convl0      = T.grad(total_cost, conv_layer0.params)
 
     updates = [
-        (layer3.params[0], layer3.params[0] - learning_rate * grad_l3[0]),
-        (layer3.params[1], layer3.params[1] - learning_rate * grad_l3[1]),
-        (layer2.params[0], layer2.params[0] - learning_rate * grad_l2[0]),
-        (layer2.params[1], layer2.params[1] - learning_rate * grad_l2[1]),
-        (layer1.params[0], layer1.params[0] - learning_rate * grad_l1[0]),
-        (layer1.params[1], layer1.params[1] - learning_rate * grad_l1[1]),
-        (layer0.params[0], layer0.params[0] - learning_rate * grad_l0[0]),
-        (layer0.params[1], layer0.params[1] - learning_rate * grad_l0[1])
+        (class_layer0.params[0], class_layer0.params[0] - learning_rate * grad_classl0[0]),
+        (class_layer0.params[1], class_layer0.params[1] - learning_rate * grad_classl0[1]),
+        (fc_layer1.params[0], fc_layer1.params[0] - learning_rate * grad_fcl1[0]),
+        (fc_layer1.params[1], fc_layer1.params[1] - learning_rate * grad_fcl1[1]),
+        (fc_layer0.params[0], fc_layer0.params[0] - learning_rate * grad_fcl0[0]),
+        (fc_layer0.params[1], fc_layer0.params[1] - learning_rate * grad_fcl0[1]),
+        (conv_layer2.params[0], conv_layer2.params[0] - learning_rate * grad_convl2[0]),
+        (conv_layer2.params[1], conv_layer2.params[1] - learning_rate * grad_convl2[1]),
+        (conv_layer1.params[0], conv_layer1.params[0] - learning_rate * grad_convl1[0]),
+        (conv_layer1.params[1], conv_layer1.params[1] - learning_rate * grad_convl1[1]),
+        (conv_layer0.params[0], conv_layer0.params[0] - learning_rate * grad_convl0[0]),
+        (conv_layer0.params[1], conv_layer0.params[1] - learning_rate * grad_convl0[1])
     ]
 
     training_index = T.iscalar()
@@ -147,7 +188,7 @@ def train_cifar10(datapath, dataset_name,
 
     train_model = theano.function(
         [training_index],
-        [total_cost, layer3.errors(y)],
+        [total_cost, class_layer0.errors(y)],
         updates=updates,
         givens={
             x : shared_x[training_index * batch_size : (training_index+1) * batch_size],
@@ -157,10 +198,10 @@ def train_cifar10(datapath, dataset_name,
 
     test_model = theano.function(
         [],
-        layer3.errors(y),
+        class_layer0.errors(y),
         givens={
-            x: evalset_x,
-            y: evalset_y
+            x: evalset_x[0:5000],
+            y: evalset_y[0:5000]
         }
     )
 
@@ -175,11 +216,11 @@ def train_cifar10(datapath, dataset_name,
     validation_error = []
 
     while(epoch < n_epochs):
-        batch_index = randint(0, 4)                                # randomly generate the batch number to be trained.
+        batch_index = randint(0, num_batches-1)                                # randomly generate the batch number to be trained.
+        print "selected training batch:", batch_index
         cost_ij, error = train_model(batch_index)
         epoch = epoch + 1
         print "number of iterations:   ", epoch 
-        print "selected training batch:", batch_index
         print "current cost:           ", cost_ij
         print "validate error:         ", error
 
