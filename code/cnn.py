@@ -30,17 +30,25 @@ class MyNetConvPoolLayer(object):
 
         # if params_W is not given, generate random params_W        
         if params_W == None:
-            fan_in = numpy.prod(filter_shape[1:])
-            fan_out = (filter_shape[0] * numpy.prod(filter_shape[2:]) /
-                       numpy.prod(poolsize))
-            W_bound = numpy.sqrt(6. / (fan_in + fan_out))
+#            fan_in = numpy.prod(filter_shape[1:])
+#            fan_out = (filter_shape[0] * numpy.prod(filter_shape[2:]) /
+#                       numpy.prod(poolsize))
+#            W_bound = numpy.sqrt(6. / (fan_in + fan_out))
+#            self.W = theano.shared(
+#                numpy.asarray(
+#                    rng.uniform(low=-W_bound, high=W_bound, size=filter_shape),
+#                    dtype=theano.config.floatX
+#                ),
+#                borrow=True
+#            )
+            mu, sigma = 0, 0.1
             self.W = theano.shared(
                 numpy.asarray(
-                    rng.uniform(low=-W_bound, high=W_bound, size=filter_shape),
+                    rng.normal(mu, sigma, filter_shape),
                     dtype=theano.config.floatX
                 ),
                 borrow=True
-            )
+            )    
         else:
             self.W = theano.shared(
                 numpy.asarray(params_W,dtype=theano.config.floatX), borrow=True)
