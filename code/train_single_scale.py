@@ -72,7 +72,7 @@ def train_cifar10(datapath, dataset_name,
     # optimization parameters
     momentum_coeff = 0.9
     weight_decay = 0.0005
-    penalty_coeff = 0.00
+    penalty_coeff = 0.01
 
     num_batches = num_images / batch_size
 
@@ -161,7 +161,7 @@ def train_cifar10(datapath, dataset_name,
     # no predefined parameters.
     class_layer0 = LogisticRegression(input=fc_layer1.output, n_in=fc_layer1_hidden_nodes, n_out=10)
 
-    total_cost = class_layer0.negative_log_likelihood(y) + penalty_coeff * (fc_layer0.W.norm(2) + fc_layer1.W.norm(2))
+    total_cost = class_layer0.negative_log_likelihood(y) + penalty_coeff * class_layer0.W.norm(2)
 
     params = class_layer0.params + fc_layer1.params + fc_layer0.params + conv_layer2.params + conv_layer1.params + conv_layer0.params
     grad_classl0     = T.grad(total_cost, class_layer0.params)
