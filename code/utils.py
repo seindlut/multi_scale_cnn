@@ -158,6 +158,32 @@ def local_responce_normalization(data, eps=0.001):
     normalizer = T.sqrt(eps + (data**2).sum(axis=1))
     return data / normalizer.dimshuffle(0,'x',1,2)
 
+def max_tensor_scalar(a, b):
+    """ Function to compare values of two tensor scalars.
+        a, b: tensor scalars
+    """
+    return T.switch(a<b, b, a)
+
+def local_responce_normalization_(data, k=2, n=5, alpha=0.0001, beta=0.75):
+    """ Function for local responce normalization.
+        data  : input 4D theano.tensor
+        k     : constant number in denominator
+        n     : receptive field channels
+        alpha : coefficient
+        beta  : exponential term
+    """
+    half = n // 2
+    sq = T.sqr(data)
+    b, ch, r, c = data.shape
+    extra_channels = T.alloc(0., b, ch + 2*half, r, c)
+    sq = T.set_subtensor(extra_channels[:,half:half+ch,:,:], sq)
+    scale = k
+    for i in xrange(n):
+        scale += alpha * sq[:,i:i+ch,:,:]
+    scale = scale ** beta
+
+    return data / scale
+
 def relu(x):
     """ Function for rectified linear unit.
         Returns the maximum value of input and 0.
