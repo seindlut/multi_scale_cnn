@@ -14,33 +14,16 @@ from theano.tensor.nnet import hard_sigmoid
 from random import randint
 from IO import unpickle
 from IO import share_data
-from preprocess import normalize
-from activation import relu
+from utils import relu
 import pdb
 
-
-from logistic_sgd import LogisticRegression, load_data
-from mlp import HiddenLayer
-
-# TODO: add local contrast normalization.
-class MyNetConvPoolLayer(object):
+class ConvPoolLayer(object):
     def __init__(self, rng, input, filter_shape, image_shape, poolsize=(2,2), params_W=None, params_b=None, activation_mode=0):
         assert image_shape[1] == filter_shape[1]
         self.input = input
 
         # if params_W is not given, generate random params_W        
         if params_W == None:
-#            fan_in = numpy.prod(filter_shape[1:])
-#            fan_out = (filter_shape[0] * numpy.prod(filter_shape[2:]) /
-#                       numpy.prod(poolsize))
-#            W_bound = numpy.sqrt(6. / (fan_in + fan_out))
-#            self.W = theano.shared(
-#                numpy.asarray(
-#                    rng.uniform(low=-W_bound, high=W_bound, size=filter_shape),
-#                    dtype=theano.config.floatX
-#                ),
-#                borrow=True
-#            )
             mu, sigma = 0, 0.1
             self.W = theano.shared(
                 numpy.asarray(
