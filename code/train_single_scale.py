@@ -14,10 +14,10 @@ from theano.tensor.nnet import hard_sigmoid
 from random import randint
 from IO import * 
 from utils import *
-from conv_pool_layer import ConvPoolLayer
-from normalization_layer import NormalizationLayer
-from mlp import HiddenLayer, DropoutHiddenLayer
-from logistic_sgd import LogisticRegression
+from layer_conv_pool import ConvPoolLayer
+from layer_normalization import NormalizationLayer
+from layer_multi_layer_perceptron import HiddenLayer, DropoutHiddenLayer
+from layer_logistic_regression import LogisticRegression
 import pdb
 
 
