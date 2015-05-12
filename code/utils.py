@@ -1,12 +1,3 @@
-""" This file contains different utility functions that are not connected
-in anyway to the networks presented in the tutorials, but rather help in
-processing the outputs into a more understandable way.
-
-For example ``tile_raster_images`` helps in generating a easy to grasp
-image from a set of samples or weights.
-"""
-
-
 import numpy
 import theano.tensor as T
 
@@ -16,7 +7,6 @@ def scale_to_unit_interval(ndar, eps=1e-8):
     ndar -= ndar.min()
     ndar *= 1.0 / (ndar.max() + eps)
     return ndar
-
 
 def tile_raster_images(X, img_shape, tile_shape, tile_spacing=(0, 0),
                        scale_rows_to_unit_interval=True,
@@ -138,3 +128,54 @@ def tile_raster_images(X, img_shape, tile_shape, tile_spacing=(0, 0),
                     ] = this_img * c
         return out_array
 
+def mean_subtraction_normalization(data, data_shape):
+    """ Function used for normalization by subtraction of
+        mean value in the same spatial position.
+        We use a 3D mean filter for implementation.
+        data: input 4D theano.tensor
+    """
+    filter_shape = (data_shape[1], data_shape[1], 1, 1) 
+    mean_filter = theano.shared(
+        numpy.asarray(
+            1./ data_shape[1] * numpy.ones(filter_shape),
+            dtype=theano.config.floatX
+        ),
+        borrow=True
+    )
+    mean_tensor =  theano.tensor.nnet.conv.conv2d(
+        input=data,
+        filters=mean_filter,
+        filter_shape=filter_shape,
+        image_shape=data_shape
+    )
+    return (data - mean_tensor)
+
+def local_responce_normalization(data, eps=0.001):
+    """ Function used for local responce normalization. 
+        data: input 4D theano.tensor
+        eps: small constant in case the normalizer gets 0
+    """
+    normalizer = T.sqrt(eps + (data**2).sum(axis=1))
+    return data / normalizer.dimshuffle(0,'x',1,2)
+
+def relu(x):
+    """ Function for rectified linear unit.
+        Returns the maximum value of input and 0.
+    """
+    return T.switch(x<0, 0, x)
+
+def unit_scaling(data, scale=255.0):
+    """ Function used to normalize data, i.e.
+        to divide the data by a certain factor. 
+        data: numpy.ndarray.
+        scale: scaling factor to be divided. """
+
+    return data / scale 
+
+def mean_subtraction_preprocessing(data):
+    """ Function used to subtract the mean image
+        of the dataset.
+        data: numpy array of size n*m, representing
+              n m-dim row vectors of image.
+    """
+    return (data - data.mean(axis=0))
