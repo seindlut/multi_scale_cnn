@@ -15,9 +15,10 @@ class LogisticRegression(object):
         randnumgen = numpy.random.RandomState(12345)
         # if W is not given, random generate W
         if W is None:
+            mu, sigma = 0, 0.1
             self.W = theano.shared(
                 value=numpy.asarray(
-                    randnumgen.normal(0, 0.1, (n_in, n_out)),
+                    randnumgen.normal(mu, sigma, (n_in, n_out)),
                     dtype=theano.config.floatX
                 ),
                 name='W',
