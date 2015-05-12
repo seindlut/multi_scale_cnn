@@ -1,10 +1,3 @@
-#       2. add dropout by using a simple mask of (0, 1)
-#       3. analysis of activation state of hidden layer.
-#          3.1 finish training and save parameters
-#          3.2 forward propagate training set and record hidden layer state.
-#          3.3 display histogram of hidden layer state.
-
-
 import os
 import sys
 import time
@@ -19,23 +12,20 @@ from theano.tensor.nnet import conv
 from theano.tensor.nnet import sigmoid
 from theano.tensor.nnet import hard_sigmoid
 from random import randint
-from IO import unpickle
-from IO import share_data
-import preprocess
-from preprocess import normalize
-from cnn import MyNetConvPoolLayer
-from activation import relu
+from IO import * 
+from utils import *
+from conv_pool_layer import ConvPoolLayer
 from normalization_layer import NormalizationLayer
+from mlp import HiddenLayer, DropoutHiddenLayer
+from logistic_sgd import LogisticRegression
 import pdb
 
-from logistic_sgd import LogisticRegression, load_data
-from mlp import HiddenLayer, DropoutHiddenLayer
 
 # important learning rate 0.05
 # important learning rate [20, 50]
 def train_cifar10(datapath, dataset_name,
-                  learning_rate=0.05, n_epochs=2000,
-                  nkerns=[32,32,64], batch_size=5000):
+                  learning_rate=0.05, n_epochs=6000,
+                  nkerns=[32,32,64], batch_size=500):
     """ This function is used to train cifar10 dataset for object recognition."""
     rng = numpy.random.RandomState(23455)                        # generate random number seed
     num_images = 50000
@@ -87,10 +77,10 @@ def train_cifar10(datapath, dataset_name,
     for i in range(len(dataset_name)):
         temp_data = unpickle(datapath+dataset_name[i])
         temp_x    = temp_data['data']
-        temp_x    = preprocess.mean_subtraction(temp_x)
+        temp_x    = mean_subtraction_preprocessing(temp_x)
         temp_y    = numpy.array(temp_data['labels'])                      # y labels are python lists, convert
                                                                           # to numpy.ndarray
-        normalized_x = normalize(temp_x)                                  # normalize data, rescale to 0 - 1
+        normalized_x = unit_scaling(temp_x)                                  # normalize data, rescale to 0 - 1
         
         data_list = numpy.append(data_list, normalized_x, axis=0)
         label_list= numpy.append(label_list, temp_y, axis=0)              # loop over the whole training set
@@ -100,9 +90,9 @@ def train_cifar10(datapath, dataset_name,
 
     validate_set = unpickle('../data/cifar10/test_batch')
     validate_x = validate_set['data']
-    validate_x = preprocess.mean_subtraction(validate_x)
+    validate_x = mean_subtraction_preprocessing(validate_x)
     validate_y = validate_set['labels']
-    normalized_valx = normalize(validate_x)                               # normalize the validation set.
+    normalized_valx = unit_scaling(validate_x)                               # normalize the validation set.
     evalset_x, evalset_y = share_data(normalized_valx, validate_y)
     del validate_set, validate_x, validate_y, normalized_valx
 
@@ -117,7 +107,7 @@ def train_cifar10(datapath, dataset_name,
     
     conv_layer0_input = x.reshape((batch_size, num_channels, conv_layer0_rows, conv_layer0_cols))
 
-    conv_layer0 = MyNetConvPoolLayer(
+    conv_layer0 = ConvPoolLayer(
         rng,
         input=conv_layer0_input,
         image_shape=(batch_size, num_channels, conv_layer0_rows, conv_layer0_cols),        # image_shape = (500, 3, 32, 32)
@@ -130,7 +120,7 @@ def train_cifar10(datapath, dataset_name,
         data=conv_layer0.output
     )
   
-    conv_layer1 = MyNetConvPoolLayer(
+    conv_layer1 = ConvPoolLayer(
         rng,
 #        input=conv_layer0.output,
         input=norm_layer0.output,
@@ -144,7 +134,7 @@ def train_cifar10(datapath, dataset_name,
         data=conv_layer1.output
     )
 
-    conv_layer2 = MyNetConvPoolLayer(
+    conv_layer2 = ConvPoolLayer(
         rng,
 #        input=conv_layer1.output,
         input=norm_layer1.output,
@@ -262,7 +252,7 @@ def train_cifar10(datapath, dataset_name,
     validation_error = []
 
     while(epoch < n_epochs):
-        while(epoch < 1000):
+        while(epoch < 2000):
             batch_index = randint(0, num_batches-1)                                # randomly generate the batch number to be trained.
             print "selected training batch:", batch_index
             cost_ij, error = train_model(batch_index)

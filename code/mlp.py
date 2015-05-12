@@ -10,8 +10,6 @@ import theano.tensor as T
 
 from logistic_sgd import LogisticRegression 
 
-
-# TODO: determine the state variable
 class HiddenLayer(object):
     def __init__(self, rng, input, n_in, n_out, W=None, b=None,
                  activation=T.tanh):
@@ -21,14 +19,6 @@ class HiddenLayer(object):
         self.input = input
 
         if W is None:
-#            W = numpy.asarray(
-#                rng.uniform(
-#                    low=-numpy.sqrt(6. / (n_in + n_out)),
-#                    high=numpy.sqrt(6. / (n_in + n_out)),
-#                    size=(n_in, n_out)
-#                ),
-#                dtype=theano.config.floatX
-#            )
             mu, sigma = 0, 0.1
             W = numpy.asarray(
                rng.normal(mu, sigma, (n_in, n_out)),
