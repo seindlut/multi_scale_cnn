@@ -1,4 +1,3 @@
-# TODO: 1. ADD MOMENTUM TERM AND WEIGHT DECAY FOR TRAINING!!!
 #       2. add dropout by using a simple mask of (0, 1)
 #       3. analysis of activation state of hidden layer.
 #          3.1 finish training and save parameters
@@ -26,6 +25,7 @@ import preprocess
 from preprocess import normalize
 from cnn import MyNetConvPoolLayer
 from activation import relu
+from normalization_layer import NormalizationLayer
 import pdb
 
 from logistic_sgd import LogisticRegression, load_data
@@ -34,11 +34,12 @@ from mlp import HiddenLayer, DropoutHiddenLayer
 # important learning rate 0.05
 # important learning rate [20, 50]
 def train_cifar10(datapath, dataset_name,
-                  learning_rate=0.3, n_epochs=6000,
+                  learning_rate=0.05, n_epochs=2000,
                   nkerns=[32,32,64], batch_size=5000):
     """ This function is used to train cifar10 dataset for object recognition."""
     rng = numpy.random.RandomState(23455)                        # generate random number seed
     num_images = 50000
+    num_test_images = 10000
     num_channels = 3                                             # for RGB 3-channel image inputs
 
     # convolutional layer 0 parameters #
@@ -58,23 +59,25 @@ def train_cifar10(datapath, dataset_name,
     # convolutional layer 2 parameters #
     conv_layer2_rows = (conv_layer1_rows - conv_layer1_kernel_size + 1) / conv_layer1_pool_size         # layer1_5_rows = 10
     conv_layer2_cols = (conv_layer1_cols - conv_layer1_kernel_size + 1) / conv_layer1_pool_size         # layer1_5_cols = 10
-    conv_layer2_kernel_size = 4 
-    conv_layer2_pool_size = 2 
+    conv_layer2_kernel_size = 3 
+    conv_layer2_pool_size = 1 
 
     # output rows and columns of convolutional net #
     conv_output_rows = (conv_layer2_rows - conv_layer2_kernel_size + 1) / conv_layer2_pool_size       # layer2_rows = 6 
     conv_output_cols = (conv_layer2_cols - conv_layer2_kernel_size + 1) / conv_layer2_pool_size       # layer2_cols = 6
 
     # fully connected layer parameters #
-    fc_layer0_hidden_nodes = 64 
-    fc_layer1_hidden_nodes = 10
+#    fc_layer0_hidden_nodes = 64 
+    fc_layer0_hidden_nodes = 32 
+#    fc_layer1_hidden_nodes = 10
 
     # optimization parameters
     momentum_coeff = 0.9
-    weight_decay = 0.0005
-    penalty_coeff = 0.01
+    weight_decay = 0.0001
+    penalty_coeff = 0.05 
 
     num_batches = num_images / batch_size
+    num_test_batches = num_test_images / batch_size
 
     # read in data
     data_list  = numpy.empty(shape=[0, conv_layer0_column_width])         # for each set of training data,
@@ -122,26 +125,41 @@ def train_cifar10(datapath, dataset_name,
         poolsize=(conv_layer0_pool_size, conv_layer0_pool_size),
         activation_mode=1
     )
+
+    norm_layer0 = NormalizationLayer(
+        data=conv_layer0.output
+    )
   
     conv_layer1 = MyNetConvPoolLayer(
         rng,
-        input=conv_layer0.output,
+#        input=conv_layer0.output,
+        input=norm_layer0.output,
         image_shape=(batch_size, nkerns[0], conv_layer1_rows, conv_layer1_cols),           # image_shape = (500, 20, 14, 14)
         filter_shape=(nkerns[1], nkerns[0], conv_layer1_kernel_size, conv_layer1_kernel_size),         # filter_shape= (50, 20, 5, 5)
         poolsize=(conv_layer1_pool_size, conv_layer1_pool_size),
         activation_mode=1
     ) 
 
+    norm_layer1 = NormalizationLayer(
+        data=conv_layer1.output
+    )
+
     conv_layer2 = MyNetConvPoolLayer(
         rng,
-        input=conv_layer1.output,
+#        input=conv_layer1.output,
+        input=norm_layer1.output,
         image_shape=(batch_size, nkerns[1], conv_layer2_rows, conv_layer2_cols),
         filter_shape=(nkerns[2], nkerns[1], conv_layer2_kernel_size, conv_layer2_kernel_size),
         poolsize=(conv_layer2_pool_size, conv_layer2_pool_size),
         activation_mode=1
     )
 
-    fc_layer0_input = conv_layer2.output.flatten(2)    
+    norm_layer2 = NormalizationLayer(
+        data=conv_layer2.output
+    )
+
+#    fc_layer0_input = conv_layer2.output.flatten(2)    
+    fc_layer0_input = norm_layer2.output.flatten(2)
     fc_layer0 = HiddenLayer(
         rng,
         input=fc_layer0_input,
@@ -150,22 +168,26 @@ def train_cifar10(datapath, dataset_name,
         activation=relu
     )    
 
-    fc_layer1 = HiddenLayer(
-        rng,
-        input=fc_layer0.output,
-	n_in=fc_layer0_hidden_nodes, 
-        n_out=fc_layer1_hidden_nodes,
-        activation=relu
-    )
+#    fc_layer1 = HiddenLayer(
+#        rng,
+#        input=fc_layer0.output,
+#	n_in=fc_layer0_hidden_nodes, 
+#        n_out=fc_layer1_hidden_nodes,
+#        activation=relu
+#    )
     # two logistic regression does not share any parameters, so there is
     # no predefined parameters.
-    class_layer0 = LogisticRegression(input=fc_layer1.output, n_in=fc_layer1_hidden_nodes, n_out=10)
+#    class_layer0 = LogisticRegression(input=fc_layer1.output, n_in=fc_layer1_hidden_nodes, n_out=10)
+    class_layer0 = LogisticRegression(input=fc_layer0.output, n_in=fc_layer0_hidden_nodes, n_out=10)
 
+
+    # compare the difference between regularization of hidden layer weights and classifier weights.
+    check = class_layer0.W.norm(2)
     total_cost = class_layer0.negative_log_likelihood(y) + penalty_coeff * class_layer0.W.norm(2)
+#    total_cost = class_layer0.negative_log_likelihood(y) + penalty_coeff * (fc_layer0.W.norm(2)+fc_layer1.W.norm(2))
 
-    params = class_layer0.params + fc_layer1.params + fc_layer0.params + conv_layer2.params + conv_layer1.params + conv_layer0.params
     grad_classl0     = T.grad(total_cost, class_layer0.params)
-    grad_fcl1        = T.grad(total_cost, fc_layer1.params)
+#    grad_fcl1        = T.grad(total_cost, fc_layer1.params)
     grad_fcl0        = T.grad(total_cost, fc_layer0.params)
     grad_convl2      = T.grad(total_cost, conv_layer2.params)
     grad_convl1      = T.grad(total_cost, conv_layer1.params)
@@ -192,10 +214,10 @@ def train_cifar10(datapath, dataset_name,
         (fc_layer0.params[0], fc_layer0.params[0] + momentum_coeff * fc_layer0.momentum_W - weight_decay * learning_rate * fc_layer0.params[0] - learning_rate * grad_fcl0[0]),
         (fc_layer0.params[1], fc_layer0.params[1] + momentum_coeff * fc_layer0.momentum_b - weight_decay * learning_rate * fc_layer0.params[1] - learning_rate * grad_fcl0[1]),
 
-        (fc_layer1.momentum_W, momentum_coeff * fc_layer1.momentum_W - weight_decay * learning_rate * fc_layer1.params[0] - learning_rate * grad_fcl1[0]),
-        (fc_layer1.momentum_b, momentum_coeff * fc_layer1.momentum_b - weight_decay * learning_rate * fc_layer1.params[1] - learning_rate * grad_fcl1[1]),
-        (fc_layer1.params[0], fc_layer1.params[0] + momentum_coeff * fc_layer1.momentum_W - weight_decay * learning_rate * fc_layer1.params[0] - learning_rate * grad_fcl1[0]),
-        (fc_layer1.params[1], fc_layer1.params[1] + momentum_coeff * fc_layer1.momentum_b - weight_decay * learning_rate * fc_layer1.params[1] - learning_rate * grad_fcl1[1]),
+#        (fc_layer1.momentum_W, momentum_coeff * fc_layer1.momentum_W - weight_decay * learning_rate * fc_layer1.params[0] - learning_rate * grad_fcl1[0]),
+#        (fc_layer1.momentum_b, momentum_coeff * fc_layer1.momentum_b - weight_decay * learning_rate * fc_layer1.params[1] - learning_rate * grad_fcl1[1]),
+#        (fc_layer1.params[0], fc_layer1.params[0] + momentum_coeff * fc_layer1.momentum_W - weight_decay * learning_rate * fc_layer1.params[0] - learning_rate * grad_fcl1[0]),
+#        (fc_layer1.params[1], fc_layer1.params[1] + momentum_coeff * fc_layer1.momentum_b - weight_decay * learning_rate * fc_layer1.params[1] - learning_rate * grad_fcl1[1]),
 
         (class_layer0.momentum_W, momentum_coeff * class_layer0.momentum_W - weight_decay * learning_rate * class_layer0.params[0] - learning_rate * grad_classl0[0]), 
         (class_layer0.momentum_b, momentum_coeff * class_layer0.momentum_b - weight_decay * learning_rate * class_layer0.params[1] - learning_rate * grad_classl0[1]), 
@@ -217,14 +239,18 @@ def train_cifar10(datapath, dataset_name,
     )
 
     test_model = theano.function(
-        [],
+        [validate_index],
         class_layer0.errors(y),
         givens={
-            x: evalset_x[0:5000],
-            y: evalset_y[0:5000]
+            x: evalset_x[validate_index * batch_size : (validate_index+1) * batch_size],
+            y: evalset_y[validate_index * batch_size : (validate_index+1) * batch_size]
         }
     )
 
+    check_norm = theano.function(
+        [],
+        check
+    )
     ###############
     # TRAIN MODEL #
     ###############
@@ -236,23 +262,49 @@ def train_cifar10(datapath, dataset_name,
     validation_error = []
 
     while(epoch < n_epochs):
+        while(epoch < 1000):
+            batch_index = randint(0, num_batches-1)                                # randomly generate the batch number to be trained.
+            print "selected training batch:", batch_index
+            cost_ij, error = train_model(batch_index)
+            epoch = epoch + 1
+            print "number of iterations:   ", epoch 
+            print "current cost:           ", cost_ij
+            print "training error:         ", error
+    
+            if (epoch % 5 == 0):
+                error_test = 0
+                for test_batch_index in range(num_test_batches):
+                    error_test = error_test + test_model(test_batch_index)
+                error_test = error_test / float(num_test_batches)    
+                print "      "
+                print "validate error of test_batch:", error_test
+                print "      "
+                validation_error.append(error_test.tolist())
+    
+            training_cost.append(cost_ij.tolist())
+
+        learning_rate = 0.01 
         batch_index = randint(0, num_batches-1)                                # randomly generate the batch number to be trained.
         print "selected training batch:", batch_index
+   
         cost_ij, error = train_model(batch_index)
         epoch = epoch + 1
         print "number of iterations:   ", epoch 
         print "current cost:           ", cost_ij
-        print "validate error:         ", error
-
-        if (epoch % 10 == 0):
-            error_test = test_model()
+        print "training error:         ", error
+ 
+        if (epoch % 5 == 0):
+            error_test = 0
+            for test_batch_index in range(num_test_batches):
+                error_test = error_test + test_model(test_batch_index)
+            error_test = error_test / float(num_test_batches)    
             print "      "
             print "validate error of test_batch:", error_test
             print "      "
             validation_error.append(error_test.tolist())
+     
+            training_cost.append(cost_ij.tolist())
 
-        training_cost.append(cost_ij.tolist())
-        
         if (epoch == n_epochs):
             saved_params = [training_cost, validation_error]
             saved_file = open('cost_error', 'wb')
