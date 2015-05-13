@@ -3,7 +3,6 @@ import sys
 import time
 
 import numpy
-
 import theano
 import theano.tensor as T
 import cPickle
@@ -12,31 +11,36 @@ from theano.tensor.nnet import conv
 from theano.tensor.nnet import sigmoid
 from theano.tensor.nnet import hard_sigmoid
 from random import randint
+
 from IO import * 
 from utils import *
 from layer_conv_pool import ConvPoolLayer
 from layer_normalization import NormalizationLayer
 from layer_multi_layer_perceptron import HiddenLayer, DropoutHiddenLayer
 from layer_logistic_regression import LogisticRegression
+
 import pdb
 
+sys.setrecursionlimit(10000)
 
-# important learning rate 0.05
-# important learning rate [20, 50]
 def train_cifar10(datapath, dataset_name,
-                  learning_rate=0.05, n_epochs=6000,
+                  learning_rate=0.05, n_epochs=8000,
                   nkerns=[32,32,64], batch_size=500):
     """ This function is used to train cifar10 dataset for object recognition."""
     rng = numpy.random.RandomState(23455)                        # generate random number seed
     num_images = 50000
     num_test_images = 10000
     num_channels = 3                                             # for RGB 3-channel image inputs
+    original_image_rows = 32
+    original_image_cols = 32
+    original_image_column_width = original_image_rows * original_image_cols * num_channels
+    border_crop = 8 
 
     # convolutional layer 0 parameters #
-    conv_layer0_rows = 32                                             # image height 32
-    conv_layer0_cols = 32                                             # image width  32
-    conv_layer0_pixels = conv_layer0_rows * conv_layer0_cols          # number of pixels in a layer: 1024
-    conv_layer0_column_width = conv_layer0_pixels * num_channels      # column_width = 3072
+    conv_layer0_rows = original_image_rows - border_crop              # image height 24
+    conv_layer0_cols = original_image_cols - border_crop              # image width  24
+    conv_layer0_pixels = conv_layer0_rows * conv_layer0_cols          # number of pixels in a layer: 576
+    conv_layer0_column_width = conv_layer0_pixels * num_channels      # column_width = 1728
     conv_layer0_kernel_size = 5                                       # filter size of first layer kernels
     conv_layer0_pool_size = 2                                         # pool size of the first layer
 
@@ -57,20 +61,19 @@ def train_cifar10(datapath, dataset_name,
     conv_output_cols = (conv_layer2_cols - conv_layer2_kernel_size + 1) / conv_layer2_pool_size       # layer2_cols = 6
 
     # fully connected layer parameters #
-#    fc_layer0_hidden_nodes = 64 
-    fc_layer0_hidden_nodes = 32 
+    fc_layer0_hidden_nodes = 32
 #    fc_layer1_hidden_nodes = 10
 
     # optimization parameters
     momentum_coeff = 0.9
     weight_decay = 0.0001
-    penalty_coeff = 0.05 
+    penalty_coeff = 0.01 
 
     num_batches = num_images / batch_size
     num_test_batches = num_test_images / batch_size
 
     # read in data
-    data_list  = numpy.empty(shape=[0, conv_layer0_column_width])         # for each set of training data,
+    data_list  = numpy.empty(shape=[0, original_image_column_width])      # for each set of training data,
                                                                           # column width is fixed.
     label_list = numpy.empty(shape=[0,])                                  # for each set of training labels,
                                                                           # row height is fixed.
@@ -104,13 +107,15 @@ def train_cifar10(datapath, dataset_name,
     # BUILD ACTUAL MODEL #
     ######################
     print '... buliding the model'    
-    
-    conv_layer0_input = x.reshape((batch_size, num_channels, conv_layer0_rows, conv_layer0_cols))
+
+    full_size_input = x.reshape((batch_size, num_channels, original_image_rows, original_image_cols))
+    conv_layer0_input = crop_images(full_size_input, (batch_size, num_channels, original_image_rows, original_image_cols))
+
 
     conv_layer0 = ConvPoolLayer(
         rng,
         input=conv_layer0_input,
-        image_shape=(batch_size, num_channels, conv_layer0_rows, conv_layer0_cols),        # image_shape = (500, 3, 32, 32)
+        image_shape=(batch_size, num_channels, conv_layer0_rows, conv_layer0_cols),                    # image_shape = (500, 3, 32, 32)
         filter_shape=(nkerns[0], num_channels, conv_layer0_kernel_size, conv_layer0_kernel_size),      # filter_shape= (20, 3, 5, 5)
         poolsize=(conv_layer0_pool_size, conv_layer0_pool_size),
         activation_mode=1
@@ -122,7 +127,6 @@ def train_cifar10(datapath, dataset_name,
   
     conv_layer1 = ConvPoolLayer(
         rng,
-#        input=conv_layer0.output,
         input=norm_layer0.output,
         image_shape=(batch_size, nkerns[0], conv_layer1_rows, conv_layer1_cols),           # image_shape = (500, 20, 14, 14)
         filter_shape=(nkerns[1], nkerns[0], conv_layer1_kernel_size, conv_layer1_kernel_size),         # filter_shape= (50, 20, 5, 5)
@@ -136,7 +140,6 @@ def train_cifar10(datapath, dataset_name,
 
     conv_layer2 = ConvPoolLayer(
         rng,
-#        input=conv_layer1.output,
         input=norm_layer1.output,
         image_shape=(batch_size, nkerns[1], conv_layer2_rows, conv_layer2_cols),
         filter_shape=(nkerns[2], nkerns[1], conv_layer2_kernel_size, conv_layer2_kernel_size),
@@ -165,14 +168,12 @@ def train_cifar10(datapath, dataset_name,
 #        n_out=fc_layer1_hidden_nodes,
 #        activation=relu
 #    )
-    # two logistic regression does not share any parameters, so there is
-    # no predefined parameters.
+
 #    class_layer0 = LogisticRegression(input=fc_layer1.output, n_in=fc_layer1_hidden_nodes, n_out=10)
     class_layer0 = LogisticRegression(input=fc_layer0.output, n_in=fc_layer0_hidden_nodes, n_out=10)
 
 
     # compare the difference between regularization of hidden layer weights and classifier weights.
-    check = class_layer0.W.norm(2)
     total_cost = class_layer0.negative_log_likelihood(y) + penalty_coeff * class_layer0.W.norm(2)
 #    total_cost = class_layer0.negative_log_likelihood(y) + penalty_coeff * (fc_layer0.W.norm(2)+fc_layer1.W.norm(2))
 
@@ -237,10 +238,6 @@ def train_cifar10(datapath, dataset_name,
         }
     )
 
-    check_norm = theano.function(
-        [],
-        check
-    )
     ###############
     # TRAIN MODEL #
     ###############
