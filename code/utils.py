@@ -218,6 +218,5 @@ def crop_images(data, image_shape, border_width=8, mode=0):
     output = T.alloc(0., image_shape[0], image_shape[1], row_step, col_step) 
     for i in range(image_shape[0]):           
         begin_idx = numpy.random.randint(border_width)
-        print "beginning index: ", begin_idx
         output = T.set_subtensor(output[i,:,:,:], data[i,:,begin_idx:(begin_idx+row_step),begin_idx:(begin_idx+col_step)])
     return output 
