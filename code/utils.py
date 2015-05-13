@@ -205,3 +205,19 @@ def mean_subtraction_preprocessing(data):
               n m-dim row vectors of image.
     """
     return (data - data.mean(axis=0))
+
+def crop_images(data, image_shape, border_width=8, mode=0):
+    """ Function used to crop the images by a certain border width.
+        data         : input data, theano 4D tensor
+        image_shape  : 4-tuple, (batch_size, num_channels, image_rows, image_cols)
+        border_width : border width to be cropped, default value 8
+        mode         : binary, 0 for random, 1 for centered crop.
+    """
+    row_step = image_shape[2] - border_width
+    col_step = image_shape[3] - border_width
+    output = T.alloc(0., image_shape[0], image_shape[1], row_step, col_step) 
+    for i in range(image_shape[0]):           
+        begin_idx = numpy.random.randint(border_width)
+        print "beginning index: ", begin_idx
+        output = T.set_subtensor(output[i,:,:,:], data[i,:,begin_idx:(begin_idx+row_step),begin_idx:(begin_idx+col_step)])
+    return output 
