@@ -213,10 +213,44 @@ def crop_images(data, image_shape, border_width=8, mode=0):
         border_width : border width to be cropped, default value 8
         mode         : binary, 0 for random, 1 for centered crop.
     """
-    row_step = image_shape[2] - border_width
-    col_step = image_shape[3] - border_width
-    output = T.alloc(0., image_shape[0], image_shape[1], row_step, col_step) 
-    for i in range(image_shape[0]):           
-        begin_idx = numpy.random.randint(border_width)
-        output = T.set_subtensor(output[i,:,:,:], data[i,:,begin_idx:(begin_idx+row_step),begin_idx:(begin_idx+col_step)])
-    return output 
+    if (mode == 0):
+        row_step = image_shape[2] - border_width
+        col_step = image_shape[3] - border_width
+        output = T.alloc(0., image_shape[0], image_shape[1], row_step, col_step)
+        for i in range(image_shape[0]):           
+            begin_idx = numpy.random.randint(border_width)
+            output = T.set_subtensor(output[i,:,:,:], data[i,:,begin_idx:(begin_idx+row_step),begin_idx:(begin_idx+col_step)])
+        return output
+    else: 
+        row_step = image_shape[2] - border_width
+        col_step = image_shape[3] - border_width
+        output = T.alloc(0., image_shape[0], image_shape[1], row_step, col_step)
+        for i in range(image_shape[0]):           
+            begin_idx = border_width / 2 
+            output = T.set_subtensor(output[i,:,:,:], data[i,:,begin_idx:(begin_idx+row_step),begin_idx:(begin_idx+col_step)])
+        return output
+
+def crop_share_images(data, image_shape, border_width=8, mode=0):
+    """ Function used to crop the images by a certain border width.
+        data         : input data, numpy 4D array
+        image_shape  : 4-tuple, (batch_size, num_channels, image_rows, image_cols)
+        border_width : border width to be cropped, default value 8
+        mode         : binary, 0 for random, 1 for centered crop.
+    """
+    if (mode == 0):
+        row_step = image_shape[2] - border_width
+        col_step = image_shape[3] - border_width
+        output = numpy.zeros((image_shape[0], image_shape[1], row_step, col_step))
+        for i in range(image_shape[0]):           
+            begin_idx = numpy.random.randint(border_width)
+            output[i,:,:,:] = data[i,:,begin_idx:(begin_idx+row_step),begin_idx:(begin_idx+col_step)]
+        return theano.shared(numpy.asarray(output, dtype=theano.config.floatX), borrow=True)
+    else: 
+        row_step = image_shape[2] - border_width
+        col_step = image_shape[3] - border_width
+        output = numpy.zeros((image_shape[0], image_shape[1], row_step, col_step))
+        for i in range(image_shape[0]):           
+            begin_idx = border_width / 2 
+            output[i,:,:,:] = data[i,:,begin_idx:(begin_idx+row_step),begin_idx:(begin_idx+col_step)]
+        return theano.shared(numpy.asarray(output, dtype=theano.config.floatX), borrow=True)
+
