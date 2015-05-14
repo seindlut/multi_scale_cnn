@@ -2,7 +2,7 @@ import theano
 import theano.tensor as T
 import numpy
 
-from utils import local_responce_normalization_
+from utils import local_responce_normalization
 
 class NormalizationLayer(object):
     """ Class for normalization, use local responce normalization.
@@ -12,4 +12,4 @@ class NormalizationLayer(object):
             data: 4D tensor as input from previous layer.
             eps:  small constant in case denominator is 0.
         """
-        self.output = local_responce_normalization_(data, k, n, alpha, beta) 
+        self.output = local_responce_normalization(data, k, n, alpha, beta) 
