@@ -2,29 +2,28 @@ import os
 import sys
 import time
 
-import numpy
-
 import theano
 import theano.tensor as T
 import cPickle
+
 from theano.tensor.signal import downsample
 from theano.tensor.nnet import conv
 from theano.tensor.nnet import sigmoid
 from theano.tensor.nnet import hard_sigmoid
-from random import randint
-from IO import unpickle
-from IO import share_data
+
+import numpy
 from utils import relu
 import pdb
 
 class ConvPoolLayer(object):
-    def __init__(self, rng, input, filter_shape, image_shape, poolsize=(2,2), params_W=None, params_b=None, activation_mode=0):
+    def __init__(self, rng, input, filter_shape, image_shape, 
+                 poolsize=(2,2), params_W=None, params_b=None, 
+                 mu=0, sigma=0.1, activation_mode=0):
         assert image_shape[1] == filter_shape[1]
         self.input = input
 
         # if params_W is not given, generate random params_W        
         if params_W == None:
-            mu, sigma = 0, 0.1
             self.W = theano.shared(
                 numpy.asarray(
                     rng.normal(mu, sigma, filter_shape),
@@ -74,5 +73,3 @@ class ConvPoolLayer(object):
             self.output = T.tanh(pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
         elif activation_mode == 1:
             self.output = relu(pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
-        # parameters list
-        self.params = [self.W, self.b]
