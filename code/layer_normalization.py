@@ -3,7 +3,7 @@ import theano.tensor as T
 import numpy
 
 from utils import local_responce_normalization_across
-
+from utils import local_responce_normalization_within
 class NormalizationLayer(object):
     """ Class for normalization, use local responce normalization.
     """
