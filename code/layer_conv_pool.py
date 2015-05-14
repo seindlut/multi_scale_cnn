@@ -73,3 +73,5 @@ class ConvPoolLayer(object):
             self.output = T.tanh(pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
         elif activation_mode == 1:
             self.output = relu(pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
+
+        self.params = [self.W, self.b]
