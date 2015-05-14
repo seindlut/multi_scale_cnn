@@ -179,8 +179,7 @@ def local_responce_normalization_across(data, n=5, alpha=0.0001, beta=0.75):
 def local_responce_normalization_within(data, n=5, alpha=0.0001, beta=0.75):
     """ Function for local responce normalization within channels.
         data  : input 4D theano.tensor
-        k     : constant number in denominator
-        n     : receptive field channels
+        n     : receptive field 
         alpha : coefficient
         beta  : exponential term
     """
