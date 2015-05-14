@@ -11,11 +11,11 @@ import theano.tensor as T
 
 
 class LogisticRegression(object):
-    def __init__(self, input, n_in, n_out, W=None, b=None):
+    def __init__(self, input, n_in, n_out, W=None, b=None,
+                 mu=0, sigma=0.1):
         randnumgen = numpy.random.RandomState(12345)
         # if W is not given, random generate W
         if W is None:
-            mu, sigma = 0, 0.1
             self.W = theano.shared(
                 value=numpy.asarray(
                     randnumgen.normal(mu, sigma, (n_in, n_out)),

@@ -18,7 +18,7 @@ import pdb
 class ConvPoolLayer(object):
     def __init__(self, rng, input, filter_shape, image_shape, 
                  poolsize=(2,2), params_W=None, params_b=None, 
-                 mu=0, sigma=0.1, activation_mode=0):
+                 mu=0, sigma=0.1, bias_val=0.5, activation_mode=0):
         assert image_shape[1] == filter_shape[1]
         self.input = input
 
@@ -37,7 +37,7 @@ class ConvPoolLayer(object):
 
         # if params_b is not given, generate random params_b
         if params_b == None:
-            b_values = numpy.zeros((filter_shape[0],), dtype=theano.config.floatX)
+            b_values = bias_val * numpy.ones((filter_shape[0],), dtype=theano.config.floatX)
             self.b = theano.shared(value=b_values, borrow=True)
         else:
             self.b = theano.shared(

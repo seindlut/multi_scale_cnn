@@ -7,16 +7,17 @@ import numpy
 import theano
 import theano.tensor as T
 
+from utils import relu
+
 class HiddenLayer(object):
     def __init__(self, rng, input, n_in, n_out, W=None, b=None,
-                 activation=T.tanh):
+                 mu=0, sigma=0.1, activation=relu):
         """ state is the symbol to distinguish between training and testing,
             0 for training and 1 for testing.
         """
         self.input = input
 
         if W is None:
-            mu, sigma = 0, 0.1
             W = numpy.asarray(
                rng.normal(mu, sigma, (n_in, n_out)),
                dtype=theano.config.floatX
