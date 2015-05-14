@@ -150,21 +150,13 @@ def mean_subtraction_normalization(data, data_shape):
     )
     return (data - mean_tensor)
 
-def local_responce_normalization(data, eps=0.001):
-    """ Function used for local responce normalization. 
-        data: input 4D theano.tensor
-        eps: small constant in case the normalizer gets 0
-    """
-    normalizer = T.sqrt(eps + (data**2).sum(axis=1))
-    return data / normalizer.dimshuffle(0,'x',1,2)
-
 def max_tensor_scalar(a, b):
     """ Function to compare values of two tensor scalars.
         a, b: tensor scalars
     """
     return T.switch(a<b, b, a)
 
-def local_responce_normalization_(data, k=2, n=5, alpha=0.0001, beta=0.75):
+def local_responce_normalization(data, k=2, n=5, alpha=0.0001, beta=0.75):
     """ Function for local responce normalization.
         data  : input 4D theano.tensor
         k     : constant number in denominator
@@ -219,7 +211,8 @@ def crop_images(data, image_shape, border_width=8, mode=0):
         output = T.alloc(0., image_shape[0], image_shape[1], row_step, col_step)
         for i in range(image_shape[0]):           
             begin_idx = numpy.random.randint(border_width)
-            output = T.set_subtensor(output[i,:,:,:], data[i,:,begin_idx:(begin_idx+row_step),begin_idx:(begin_idx+col_step)])
+            output = T.set_subtensor(output[i,:,:,:], 
+                data[i,:,begin_idx:(begin_idx+row_step),begin_idx:(begin_idx+col_step)])
         return output
     else: 
         row_step = image_shape[2] - border_width
@@ -227,7 +220,8 @@ def crop_images(data, image_shape, border_width=8, mode=0):
         output = T.alloc(0., image_shape[0], image_shape[1], row_step, col_step)
         for i in range(image_shape[0]):           
             begin_idx = border_width / 2 
-            output = T.set_subtensor(output[i,:,:,:], data[i,:,begin_idx:(begin_idx+row_step),begin_idx:(begin_idx+col_step)])
+            output = T.set_subtensor(output[i,:,:,:], 
+                data[i,:,begin_idx:(begin_idx+row_step),begin_idx:(begin_idx+col_step)])
         return output
 
 def crop_share_images(data, image_shape, border_width=8, mode=0):
@@ -253,4 +247,3 @@ def crop_share_images(data, image_shape, border_width=8, mode=0):
             begin_idx = border_width / 2 
             output[i,:,:,:] = data[i,:,begin_idx:(begin_idx+row_step),begin_idx:(begin_idx+col_step)]
         return theano.shared(numpy.asarray(output, dtype=theano.config.floatX), borrow=True)
-
