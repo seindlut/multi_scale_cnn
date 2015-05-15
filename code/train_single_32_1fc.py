@@ -22,7 +22,7 @@ from layer_logistic_regression import LogisticRegression
 import pdb
 
 def train_cifar10(datapath, trainset_name, valset_name,
-                  learning_rate=0.01, n_epochs=10000,
+                  learning_rate=0.01, n_epochs=50000,
                   nkerns=[32,32,64], batch_size=100):
     """ This function is used to train cifar10 dataset for object recognition."""
     # layer parameters
@@ -160,6 +160,7 @@ def train_cifar10(datapath, trainset_name, valset_name,
     )
 
     class_layer0 = LogisticRegression(input=fc_layer1.output, n_in=fc_layer1_hidden_nodes, n_out=10)
+#    class_layer0 = LogisticRegression(input=fc_layer0.output, n_in=fc_layer0_hidden_nodes, n_out=10)
 
     # compare the difference between regularization of hidden layer weights and classifier weights.
     total_cost = class_layer0.negative_log_likelihood(y) + penalty_coeff * class_layer0.W.norm(2)
