@@ -22,7 +22,7 @@ from layer_logistic_regression import LogisticRegression
 import pdb
 
 def train_cifar10(datapath, trainset_name, valset_name,
-                  learning_rate=0.01, n_epochs=50000,
+                  learning_rate=0.01, n_epochs=50,
                   nkerns=[32,32,64], batch_size=100):
     """ This function is used to train cifar10 dataset for object recognition."""
     # layer parameters

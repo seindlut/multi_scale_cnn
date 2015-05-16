@@ -22,25 +22,27 @@ from layer_logistic_regression import LogisticRegression
 import pdb
 
 def train_cifar10(datapath, trainset_name, valset_name,
-                  learning_rate=0.01, n_epochs=50000,
-                  nkerns=[32,32,64], batch_size=100):
+                  learning_rate=0.01, n_epochs=10000,
+                  nkerns=[32,32,64], batch_size=5000):
     """ This function is used to train cifar10 dataset for object recognition."""
     # layer parameters
-    rng = numpy.random.RandomState(23455)                        # generate random number seed
+    rng = numpy.random.RandomState(23455)                    # generate random number seed
     num_images = 50000
     num_test_images = 10000
-    num_channels = 3                                             # for RGB 3-channel image inputs
+    num_batches = num_images / batch_size
+    num_test_batches = num_test_images / batch_size
+    num_channels = 3                                         # for RGB 3-channel image inputs
     original_image_rows = 32
     original_image_cols = 32
     original_image_column_width = original_image_rows * original_image_cols * num_channels
 
     # convolutional layer 0 parameters #
-    conv_layer0_rows = original_image_rows                            # image height 32
-    conv_layer0_cols = original_image_cols                            # image width  32
-    conv_layer0_pixels = conv_layer0_rows * conv_layer0_cols          # number of pixels in a layer: 1024
-    conv_layer0_column_width = conv_layer0_pixels * num_channels      # column_width = 3072
-    conv_layer0_kernel_size = 5                                       # filter size of first layer kernels
-    conv_layer0_pool_size = 2                                         # pool size of the first layer
+    conv_layer0_rows = original_image_rows                   # image height 32
+    conv_layer0_cols = original_image_cols                   # image width  32
+    conv_layer0_pixels = conv_layer0_rows * conv_layer0_cols # number of pixels in a layer: 1024
+    conv_layer0_column_width = conv_layer0_pixels * num_channels# column_width = 3072
+    conv_layer0_kernel_size = 5                              # filter size of 1st layer kernels
+    conv_layer0_pool_size = 2                                # pool size of the 1st layer
 
     # convolutional layer 1 parameters #
     conv_layer1_rows = (conv_layer0_rows - conv_layer0_kernel_size + 1) / conv_layer0_pool_size       # conv_layer1_rows = 14
@@ -51,24 +53,21 @@ def train_cifar10(datapath, trainset_name, valset_name,
     # convolutional layer 2 parameters #
     conv_layer2_rows = (conv_layer1_rows - conv_layer1_kernel_size + 1) / conv_layer1_pool_size       # layer1_5_rows = 10
     conv_layer2_cols = (conv_layer1_cols - conv_layer1_kernel_size + 1) / conv_layer1_pool_size       # layer1_5_cols = 10
-    conv_layer2_kernel_size = 3 
+    conv_layer2_kernel_size = 5 
     conv_layer2_pool_size = 1 
 
     # output rows and columns of convolutional net #
-    conv_output_rows = (conv_layer2_rows - conv_layer2_kernel_size + 1) / conv_layer2_pool_size       # layer2_rows = 8 
-    conv_output_cols = (conv_layer2_cols - conv_layer2_kernel_size + 1) / conv_layer2_pool_size       # layer2_cols = 8
+    conv_output_rows = (conv_layer2_rows - conv_layer2_kernel_size + 1) / conv_layer2_pool_size       # layer2_rows = 6
+    conv_output_cols = (conv_layer2_cols - conv_layer2_kernel_size + 1) / conv_layer2_pool_size       # layer2_cols = 6
     
     # fully connected layer parameters #
-    fc_layer0_hidden_nodes = 64 
-    fc_layer1_hidden_nodes = 10
+    fc_layer0_hidden_nodes = 64
 
     # optimization parameters
     momentum_coeff = 0.9
     weight_decay = 0.0001
     penalty_coeff = 0.01 
 
-    num_batches = num_images / batch_size
-    num_test_batches = num_test_images / batch_size
 
     # load in raw training data
     trainx_list, trainy_list, valx_list, valy_list = load_cifar10(datapath, trainset_name, valset_name, original_image_column_width)
@@ -78,8 +77,8 @@ def train_cifar10(datapath, trainset_name, valset_name,
     valx_list   = mean_subtraction_preprocessing(valx_list)
 
     # preprocessing with unit scaling
-#    trainx_list = unit_scaling(trainx_list)
-#    valx_list   = unit_scaling(valx_list)
+    trainx_list = unit_scaling(trainx_list)
+    valx_list   = unit_scaling(valx_list)
 
     # make shared dataset
     train_x, train_y = share_data(trainx_list, trainy_list)
@@ -102,45 +101,30 @@ def train_cifar10(datapath, trainset_name, valset_name,
         image_shape=(batch_size, num_channels, conv_layer0_rows, conv_layer0_cols),                
         filter_shape=(nkerns[0], num_channels, conv_layer0_kernel_size, conv_layer0_kernel_size),
         poolsize=(conv_layer0_pool_size, conv_layer0_pool_size),
-        sigma=0.0001,
+        sigma=0.1,
         activation_mode=1
     )
 
-    norm_layer0 = NormalizationLayer(
-        data=conv_layer0.output,
-        alpha=0.00005,
-        mode=1
-    )
-  
     conv_layer1 = ConvPoolLayer(
         rng,
-        input=norm_layer0.output,
+        input=conv_layer0.output,
         image_shape=(batch_size, nkerns[0], conv_layer1_rows, conv_layer1_cols),    
         filter_shape=(nkerns[1], nkerns[0], conv_layer1_kernel_size, conv_layer1_kernel_size), 
         poolsize=(conv_layer1_pool_size, conv_layer1_pool_size),
-        sigma=0.01,
+        sigma=0.1,
         activation_mode=1
     ) 
 
-    norm_layer1 = NormalizationLayer(
-        data=conv_layer1.output,
-        alpha=0.00005,
-        mode=1
-    )
-
     conv_layer2 = ConvPoolLayer(
         rng,
-        input=norm_layer1.output,
+        input=conv_layer1.output,
         image_shape=(batch_size, nkerns[1], conv_layer2_rows, conv_layer2_cols),
         filter_shape=(nkerns[2], nkerns[1], conv_layer2_kernel_size, conv_layer2_kernel_size),
         poolsize=(conv_layer2_pool_size, conv_layer2_pool_size),
-        sigma=0.01,
+        sigma=0.1,
         activation_mode=1
     )
 
-#    norm_layer2 = NormalizationLayer(
-#        data=conv_layer2.output
-#    )
 
     fc_layer0_input = conv_layer2.output.flatten(2)
     fc_layer0 = HiddenLayer(
@@ -151,29 +135,14 @@ def train_cifar10(datapath, trainset_name, valset_name,
         activation=relu
     )    
 
-    fc_layer1 = HiddenLayer(
-        rng,
-        input=fc_layer0.output,
-    	n_in=fc_layer0_hidden_nodes, 
-        n_out=fc_layer1_hidden_nodes,
-        activation=relu
-    )
-
-    class_layer0 = LogisticRegression(input=fc_layer1.output, n_in=fc_layer1_hidden_nodes, n_out=10)
-#    class_layer0 = LogisticRegression(input=fc_layer0.output, n_in=fc_layer0_hidden_nodes, n_out=10)
+    class_layer0 = LogisticRegression(input=fc_layer0.output, n_in=fc_layer0_hidden_nodes, n_out=10)
 
     # compare the difference between regularization of hidden layer weights and classifier weights.
     total_cost = class_layer0.negative_log_likelihood(y) + penalty_coeff * class_layer0.W.norm(2)
 
-#    params = class_layer0.params + fc_layer1.params + fc_layer0.params + conv_layer2.params + conv_layer1.params + conv_layer0.params
-#    grads = T.grad(total_cost, params)
-#    updates = [
-#        (param_i, param_i - learning_rate * grad_i)
-#        for param_i, grad_i in zip(params, grads)
-#    ]
+    params = conv_layer0.params + conv_layer1.params + conv_layer2.params + fc_layer0.params + class_layer0.params
 
     grad_classl0     = T.grad(total_cost, class_layer0.params)
-    grad_fcl1        = T.grad(total_cost, fc_layer1.params)
     grad_fcl0        = T.grad(total_cost, fc_layer0.params)
     grad_convl2      = T.grad(total_cost, conv_layer2.params)
     grad_convl1      = T.grad(total_cost, conv_layer1.params)
@@ -199,11 +168,6 @@ def train_cifar10(datapath, trainset_name, valset_name,
         (fc_layer0.momentum_b, momentum_coeff * fc_layer0.momentum_b - weight_decay * learning_rate * fc_layer0.params[1] - learning_rate * grad_fcl0[1]),
         (fc_layer0.params[0], fc_layer0.params[0] + momentum_coeff * fc_layer0.momentum_W - weight_decay * learning_rate * fc_layer0.params[0] - learning_rate * grad_fcl0[0]),
         (fc_layer0.params[1], fc_layer0.params[1] + momentum_coeff * fc_layer0.momentum_b - weight_decay * learning_rate * fc_layer0.params[1] - learning_rate * grad_fcl0[1]),
-
-        (fc_layer1.momentum_W, momentum_coeff * fc_layer1.momentum_W - weight_decay * learning_rate * fc_layer1.params[0] - learning_rate * grad_fcl1[0]),
-        (fc_layer1.momentum_b, momentum_coeff * fc_layer1.momentum_b - weight_decay * learning_rate * fc_layer1.params[1] - learning_rate * grad_fcl1[1]),
-        (fc_layer1.params[0], fc_layer1.params[0] + momentum_coeff * fc_layer1.momentum_W - weight_decay * learning_rate * fc_layer1.params[0] - learning_rate * grad_fcl1[0]),
-        (fc_layer1.params[1], fc_layer1.params[1] + momentum_coeff * fc_layer1.momentum_b - weight_decay * learning_rate * fc_layer1.params[1] - learning_rate * grad_fcl1[1]),
 
         (class_layer0.momentum_W, momentum_coeff * class_layer0.momentum_W - weight_decay * learning_rate * class_layer0.params[0] - learning_rate * grad_classl0[0]), 
         (class_layer0.momentum_b, momentum_coeff * class_layer0.momentum_b - weight_decay * learning_rate * class_layer0.params[1] - learning_rate * grad_classl0[1]), 
@@ -244,12 +208,6 @@ def train_cifar10(datapath, trainset_name, valset_name,
     validation_error = []
 
     while(epoch < n_epochs):
-        if epoch > 2000:
-            learning_rate = 0.00001
-        elif epoch > 1000:
-            learning_rate = 0.0001
-        elif epoch > 300:
-            learning_rate = 0.001
         batch_index = randint(0, num_batches-1)                                # randomly generate the batch number to be trained.
         print "selected training batch:", batch_index
         cost_ij, error = train_model(batch_index)
@@ -257,24 +215,24 @@ def train_cifar10(datapath, trainset_name, valset_name,
         print "number of iterations:   ", epoch 
         print "current cost:           ", cost_ij
         print "training error:         ", error
- 
-        if (epoch % 5 == 0):
-            error_test = 0
-            for test_batch_index in range(num_test_batches):
-                error_test = error_test + test_model(test_batch_index)
-            error_test = error_test / float(num_test_batches)    
-            print "      "
-            print "validate error of test_batch:", error_test
-            print "      "
-            validation_error.append(error_test.tolist())
+
+#        if (epoch > 5000): 
+#            if (epoch % 5 == 0):
+#                error_test = 0
+#                for test_batch_index in range(num_test_batches):
+#                    error_test = error_test + test_model(test_batch_index)
+#                error_test = error_test / float(num_test_batches)    
+#                print "      "
+#                print "validate error of test_batch:", error_test
+#                print "      "
+#                validation_error.append(error_test.tolist())
  
         if (epoch == n_epochs):
-            saved_params = [training_cost, validation_error]
-            saved_file = open('cost_error', 'wb')
-            cPickle.dump(saved_params, saved_file)
+            saved_file = open('parameters', 'wb')
+            cPickle.dump(params, saved_file)
             saved_file.close()
  
 if __name__ == '__main__':
-    dsetname = ['data_batch_1','data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5'];  #dataset file names.
+    dsetname = ['data_batch_1','data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5']  #dataset file names.
     vsetname = 'test_batch'
     train_cifar10('../data/cifar10/', dsetname, vsetname)
