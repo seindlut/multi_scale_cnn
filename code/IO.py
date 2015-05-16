@@ -43,6 +43,20 @@ def load_cifar10(datapath, trainset_name, valset_name, mat2d_cols):
 
     return data_list_train, label_list_train, data_list_val, label_list_val
 
+def load_cifar10_test(datapath, testset_name, mat2d_cols):
+    """ Function used to load in cifar10 test set. 
+        datapath     : path to the dataset directory
+        testset_name : test set file name
+        mat2d_cols   : number of columns of the dataset
+        returns the data and labels as numpy 2D arrays.
+
+    """
+    temp_data = unpickle(datapath+valset_name)
+    data_list_test = temp_data['data']
+    label_list_test = numpy.array(temp_data['labels'])
+
+    return data_list_test, label_list_test
+
 def share_data(data_x, data_y, borrow=True):
     # Function used to convert array and list into shared variables
     shared_x = theano.shared(numpy.asarray(data_x,
