@@ -43,6 +43,25 @@ def load_cifar10(datapath, trainset_name, valset_name, mat2d_cols):
 
     return data_list_train, label_list_train, data_list_val, label_list_val
 
+def load_cifar10_train(datapath, trainset_name, mat2d_cols):
+    """ Function used to load in cifar10 dataset. 
+        datapath     : path to the dataset directory
+        trainset_name: training set file names
+        mat2d_cols   : number of columns of the dataset
+        returns the data and labels as numpy 2D arrays.
+    """
+    data_list_train = numpy.empty(shape=[0, mat2d_cols])
+    label_list_train= numpy.empty(shape=[0,])
+
+    for i in range(len(trainset_name)):
+        temp_data = unpickle(datapath+trainset_name[i])
+        temp_x    = temp_data['data']
+        temp_y    = numpy.array(temp_data['labels'])                    
+                                                                      
+        data_list_train = numpy.append(data_list_train, temp_x, axis=0)
+        label_list_train= numpy.append(label_list_train, temp_y, axis=0)
+    return data_list_train, label_list_train
+
 def load_cifar10_test(datapath, testset_name, mat2d_cols):
     """ Function used to load in cifar10 test set. 
         datapath     : path to the dataset directory
@@ -51,7 +70,7 @@ def load_cifar10_test(datapath, testset_name, mat2d_cols):
         returns the data and labels as numpy 2D arrays.
 
     """
-    temp_data = unpickle(datapath+valset_name)
+    temp_data = unpickle(datapath+testset_name)
     data_list_test = temp_data['data']
     label_list_test = numpy.array(temp_data['labels'])
 
