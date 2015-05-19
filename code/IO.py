@@ -7,15 +7,20 @@ import theano
 import theano.tensor as T
 
 def unpickle(file):
-    # Function to extract pickle files
-    # extract pickle files
+    """ Function for loading single pickle file."""
     fo = open(file, 'rb')
     dict = cPickle.load(fo)
     fo.close()
     return dict
 
+def pickle(variable, file_name):
+    """ Function for saving pickle file."""
+    f = open(file_name, 'wb')
+    cPickle.dump(variable,f) 
+    f.close()
+
 def load_cifar10(datapath, trainset_name, valset_name, mat2d_cols):
-    """ Function used to load in cifar10 dataset. 
+    """ Function for loading cifar10 trainset and testset. 
         datapath     : path to the dataset directory
         trainset_name: training set file names
         valset_name  : validation set file name
@@ -44,7 +49,7 @@ def load_cifar10(datapath, trainset_name, valset_name, mat2d_cols):
     return data_list_train, label_list_train, data_list_val, label_list_val
 
 def load_cifar10_train(datapath, trainset_name, mat2d_cols):
-    """ Function used to load in cifar10 dataset. 
+    """ Function for loading cifar10 trainset. 
         datapath     : path to the dataset directory
         trainset_name: training set file names
         mat2d_cols   : number of columns of the dataset
@@ -62,8 +67,19 @@ def load_cifar10_train(datapath, trainset_name, mat2d_cols):
         label_list_train= numpy.append(label_list_train, temp_y, axis=0)
     return data_list_train, label_list_train
 
+def load_cifar10_train_labels(datapath, trainset_name):
+    """ Function for loading cifar10 trainset labels.
+    """
+    label_list_train = numpy.empty(shape=[0,])
+    for i in range(len(trainset_name)):
+        temp_data = unpickle(datapath+trainset_name[i])
+        temp_y = numpy.array(temp_data['labels'])
+
+        label_list_train = numpy.append(label_list_train, temp_y, axis=0)
+    return label_list_train
+
 def load_cifar10_test(datapath, testset_name, mat2d_cols):
-    """ Function used to load in cifar10 test set. 
+    """ Function for loading cifar10 testset. 
         datapath     : path to the dataset directory
         testset_name : test set file name
         mat2d_cols   : number of columns of the dataset
