@@ -123,10 +123,10 @@ def hidden_layer_states(datapath, trainset_name, param_file_name, nkerns=[32,32,
         }
     )
 
-    states = []
+    states = numpy.empty(shape=[0, fc_layer0_hidden_nodes])
     for i in range(num_batches):
         errors = hls(i)
-        states.append(errors)
+        states = numpy.append(states, errors, axis=0)
 
     # save hidden layer node states
     f = open('hls','wb')
