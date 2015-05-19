@@ -1,4 +1,7 @@
 import numpy
+import pdb
+from IO import unpickle
+from IO import pickle
 
 def mean_vec(mat):
     """ Function used to calculate the mean vector of
@@ -7,7 +10,7 @@ def mean_vec(mat):
              m n-dim vectors.
         returns a mean vector of size n*1.
     """
-    return numpy.mean(mat, axis=1)
+    return numpy.mean(mat, axis=0)
 
 def covariance(mat):
     """ Function used to calculate the covariance of
@@ -17,9 +20,9 @@ def covariance(mat):
         returns the covariance matrix of mat.
     """
     mean_vector = mean_vec(mat)
-    mat = mat - numpy.array([mean_vector]).T
+    mat = mat - numpy.array([mean_vector])
     num_data = mat.shape[1]
-    cov = 1. / (num_data - 1) * numpy.dot(mat, mat.T)
+    cov = 1. / (num_data - 1) * numpy.dot(mat.T, mat)
     return cov
 
 def pca(mat, reduced_dim):
@@ -28,7 +31,7 @@ def pca(mat, reduced_dim):
              m n-dim vectors.
         reduced_dim: dimension to be reserved after pca.
     """
-    assert reduced_dim <= mat.shape[0]   # principle components should not 
+    assert reduced_dim <= mat.shape[1]   # principle components should not 
                                          # be greater than the original 
     eig_val, eig_vec = numpy.linalg.eig(covariance(mat))
                                          # eigen values should be rearranged
@@ -39,3 +42,10 @@ def pca(mat, reduced_dim):
     transform = eig_vec[:, 0:reduced_dim].T
     
     return transform
+
+if __name__ == '__main__':
+    node_states = unpickle('hls')
+    cov_mat = covariance(node_states)
+    trans_mat = pca(cov_mat, 10)
+    transformed_y = numpy.dot(node_states, trans_mat.T)
+    pickle(trans_mat, 'transformation_matrix')
