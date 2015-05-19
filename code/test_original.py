@@ -54,7 +54,7 @@ def test_cifar10(datapath, testset_name, param_file_name, nkerns=[32,32,64], bat
     fc_layer0_hidden_nodes = 64 
 
     # load in test data and preprocess
-    testx_list, testy_list = load_cifar10_1set(datapath, testset_name, 
+    testx_list, testy_list = load_cifar10_test(datapath, testset_name, 
                                  original_image_column_width)
     testx_list = mean_subtraction_preprocessing(testx_list)
     testx_list = unit_scaling(testx_list)
@@ -132,7 +132,7 @@ def test_cifar10(datapath, testset_name, param_file_name, nkerns=[32,32,64], bat
     )
 
     errors = test_model()
-    print "error = ", test_model
+    print "error = ", errors
 
 if __name__ == '__main__':
     datapath = '../data/cifar10/'
