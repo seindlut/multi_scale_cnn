@@ -101,3 +101,8 @@ def share_data(data_x, data_y, borrow=True):
                                            dtype=theano.config.floatX),
                              borrow=borrow)
     return shared_x, T.cast(shared_y, 'int32')
+
+def load_stl10_train(file_name):
+    """ Function for loading stl10 dataset"""
+    x, y = unpickle(file_name)
+    return [x, y] 
